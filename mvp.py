@@ -46,7 +46,7 @@ from python.mvp_logger import get_logger
 from python.verify_config_files import verify_config_file
 logger = get_logger()
 
-logger.info('############## starting mvp system ##############')
+logger.info('############## starting mvp')
 
 # Check that the configuration file is present and then load it.
 verify_config_file()
@@ -55,6 +55,7 @@ verify_config_file()
 import threading
 
 # Load mvp libraries
+from config.config import device_id
 from python.adjustThermostat import start_fan_controller
 from python.args import get_args
 from python.camera_controller import start_camera_controller
@@ -64,9 +65,11 @@ from python.mqtt_client import start_mvp_mqtt_client
 from python.repl import repl
 from python.web_chart_controller import start_web_chart_controller
 
+
 # Process the command line args
 args = get_args()
 
+logger.info('############## mvp device id: {}'.format(device_id))
 
 app_state = {'stop': False, 'silent_mode':args.silent}
 
