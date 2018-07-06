@@ -29,7 +29,7 @@ def get_file_hash(path_name):
     #return 'bogus hash'
     return standard_b64encode(m.digest()).decode('utf-8')
 
-def get_jws_url(path_name):
+def get_jws(path_name):
 
     return jwt.encode(claim_info(get_file_hash(path_name)), 
                       standard_b64decode(hmac_secret_key_b64_encoded),
@@ -38,6 +38,8 @@ def get_jws_url(path_name):
 def upload_camera_file(path_name):
 
     with open(path_name, 'rb') as f:
-        r = post('{}?s={}'.format(image_post_url, get_jws_url(path_name)), files={'image.jpg':f}) 
+        r = post('{}'.format(image_post_url), 
+                 data={'auth_method':'JWS', 'auth_data':get_jws(path_name)}, 
+                 files={'file':f}) 
 
     return r
