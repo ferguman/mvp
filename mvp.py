@@ -33,7 +33,7 @@
 # by invoking the mvp in silent mode.
 #
 # It is assumed that mvp.py is located in a directory that contains code and data organized
-# identical to the way it is stored in github (https://github.com/ferguman/openag-mvp)
+# identical to the way it is stored in github (https://github.com/ferguman/fopd)
 # 
 
 # Ok let's get started!

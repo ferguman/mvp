@@ -5,8 +5,9 @@ from subprocess import check_call, CalledProcessError, run, PIPE, STDOUT
 from sys import path, exc_info
 from shutil import copyfile
 from logging import getLogger
+from file_uploader import upload_camera_image
 
-from config.config import camera_controller_program, copy_current_image 
+from config.config import camera_controller_program, copy_current_image, upload_images 
 
 logger = getLogger('mvp.' + __name__)
 
@@ -77,6 +78,9 @@ def start_camera_controller(app_state):
                       logger.error("Coudn't copy latest image file to the web directory."
                                    + ' Check fswebcam for proper operations: {}, {}'.format(\
                                    exc_info()[0], exc_info()[1]))
+                if upload_images = True:
+                    upload_camera_image(file_location)
+
             else:
                logger.error('fsweb command failed. See following lines for more info:')
                logger.error('---return code: {}'.format(picture_results.returncode))
