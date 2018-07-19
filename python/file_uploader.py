@@ -1,6 +1,6 @@
 from base64 import standard_b64decode, standard_b64encode
 from config.config import device_id, camera_device_id, hmac_secret_key, image_post_url, fop_jose_id
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from jose import jws 
 from requests import post
@@ -13,7 +13,8 @@ def extract_timestamp(path_name) -> 'timestamp':
 
     dt = path_name.split("/")[-1].split(".")[0]
 
-    return datetime(int(dt[0:4]), int(dt[4:6]), int(dt[6:8]), hour=int(dt[9:11]), minute=int(dt[12:14]), second=int(dt[15:17])).timestamp()
+    return datetime(int(dt[0:4]), int(dt[4:6]), int(dt[6:8]), 
+                    hour=int(dt[9:11]), minute=int(dt[12:14]), second=int(dt[15:17]), tzinfo=timezone.utc).timestamp()
 
 
 # Make the JWT claim set
