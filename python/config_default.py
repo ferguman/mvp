@@ -73,8 +73,9 @@ camera_device_id = ''
 
 # ########### JWT Sjttings ##############
 # Specify a random 32 character string (e.g. GOUrUd44AcFmOz6GjiYQWRJjxOXFMsd3)
-hmac_secret_key = ''
 fop_jose_id = ''
+hmac_secret_key = ''
+#- hmac_secret_key_id = ''
 
 # ########### MQTT Settings #############
 enable_mqtt = False
