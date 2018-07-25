@@ -43,11 +43,12 @@
 # 8) Picture uploading: The system supports posting images to a server that supports the fopd picture posting 
 #                       spec (TBD: add url of the spec). Picture posting is turned off by default.
 #                       In order to turn it on do the following:
-#                       1) Enable posting -> Set upload_images to True
+#                       1) Enable posting -> Add the FopCloudStorage(posting_url) to the list of camera
+#                          subscribers. This list can be found in the camera controller configuration section
+#                          of this file.  You will need to know the posting_url.
 #                       2) Specify the value for camera_device_id. Get this value from your cloud provider.
-#                       3) Specify a value for the hmac_secret_key_b64_encoded.  You can leave this blank
-#                          if you are not going to use HMAC to sign the JWTs.
-#                       4) Specify a value for image_post_url
+#                       3) Specify a value for the hmac_secret_key_b64_encoded. This key is used to HMAC
+#                          sign the JWT claim set.
 #
 # Included in topics (e.g data/v1/[organization_guid).  If you don't want it in the topic
 # values then set it be an empty string. Note that if you are connectiong to an mvp compatible
@@ -75,7 +76,6 @@ camera_device_id = ''
 # Specify a random 32 character string (e.g. GOUrUd44AcFmOz6GjiYQWRJjxOXFMsd3)
 fop_jose_id = ''
 hmac_secret_key = ''
-#- hmac_secret_key_id = ''
 
 # ########### MQTT Settings #############
 enable_mqtt = False
@@ -133,12 +133,15 @@ log_light_state_to_local_file = True
 #
 max_air_temperature = 30
 
-# ######## Camera Controller #########
-# You must include a slash after the last subdirectory - TBD: clean this up. 
+ ######## Camera Controller #########
+# Leave the following imports alone. They contain all available subscribers.
+from python.camera_subscribers.LocalWebServer import LocalWebServer
+from python.camera_subscribers.FopCloudStorage import FopCloudStorage
+#
+enable_camera_controller = True
 camera_controller_program = ('hourly', 0)
-copy_current_image = True
-upload_images = False
-image_post_url = ''
+camera_subscribers = (LocalWebServer(),) 
+
 
 # ######## Device Ids ############
 # Use the settings below to define the system composition. Once things are working then

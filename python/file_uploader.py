@@ -1,5 +1,5 @@
-from base64 import standard_b64decode, standard_b64encode
-from config.config import device_id, camera_device_id, hmac_secret_key, image_post_url, fop_jose_id
+from base64 import standard_b64encode
+from config.config import device_id, camera_device_id, hmac_secret_key, fop_jose_id
 from datetime import datetime, timezone
 from hashlib import sha256
 from jose import jws 
@@ -50,10 +50,10 @@ def get_jws(path_name):
                     hmac_secret_key,
                     algorithm='HS256')
 
-def upload_camera_image(path_name):
+def upload_camera_image(path_name, url):
 
     with open(path_name, 'rb') as f:
-        r = post('{}'.format(image_post_url), 
+        r = post('{}'.format(url), 
                  data={'auth_method':'JWS', 'auth_data':get_jws(path_name)}, 
                  files={'file':f}) 
 
