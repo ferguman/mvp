@@ -43,9 +43,8 @@
 # 8) Picture uploading: The system supports posting images to a server that supports the fopd picture posting 
 #                       spec (TBD: add url of the spec). Picture posting is turned off by default.
 #                       In order to turn it on do the following:
-#                       1) Enable posting -> Add the FopCloudStorage(posting_url) to the list of camera
-#                          subscribers. This list can be found in the camera controller configuration section
-#                          of this file.  You will need to know the posting_url.
+#                       1) Enable posting -> Add the fop cloud service camera subscriber to the camera subscriber
+#                          list.
 #                       2) Specify the value for camera_device_id. Get this value from your cloud provider.
 #                       3) Specify a value for the hmac_secret_key_b64_encoded. This key is used to HMAC
 #                          sign the JWT claim set.
@@ -133,14 +132,19 @@ log_light_state_to_local_file = True
 #
 max_air_temperature = 30
 
- ######## Camera Controller #########
-# Leave the following imports alone. They contain all available subscribers.
-from python.camera_subscribers.LocalWebServer import LocalWebServer
-from python.camera_subscribers.FopCloudStorage import FopCloudStorage
+# ######## Camera Controller #########
+# leave the following import alone. they contain all available subscribers
 #
+# TBD: Need to add logic to the code base that skips the creation of the camera thread
+# if enable_camera_controller is set to False.
 enable_camera_controller = True
-camera_controller_program = ('hourly', 0)
-camera_subscribers = (LocalWebServer(),) 
+#
+# frequency -> The current time is reduced to a string of 4 digits as HHMM with leading zeros. Specify
+#              the regular expression that should trigger a subscriber invokation. Once triggred the 
+#              regular expression must experienc a mis-match before the subscriber will be ready to be
+#              triggered again. e.g. r'\d\d00' -> trigger every hour at the start of the first minute of the hour.
+#
+camera_subscribers = ({'sub':'LocalWebServer',  'args':{'frequency':r'\d\d00', 'take_picture_on_start':True}})
 
 
 # ######## Device Ids ############
