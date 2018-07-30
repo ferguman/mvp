@@ -2,12 +2,15 @@ from base64 import standard_b64encode
 from config.config import device_id, camera_device_id, hmac_secret_key, fop_jose_id
 from datetime import datetime, timezone
 from hashlib import sha256
+from logging import getLogger
 from jose import jws 
 from requests import post
 from time import time
 from uuid import uuid4
 
 # Note: This module uses JWT security (via jose).  Paseto is another system for implemeting token based security.
+
+logger = getLogger('mvp.' + __name__)
 
 def extract_timestamp(path_name) -> 'timestamp':
 
@@ -57,4 +60,6 @@ def upload_camera_image(path_name, url):
                  data={'auth_method':'JWS', 'auth_data':get_jws(path_name)}, 
                  files={'file':f}) 
 
-    return r
+    result = r.content.decode('utf-8')
+    if result != 'ok':
+        logger.error('Image upload error, server response -> {}'.format(result))
