@@ -126,12 +126,6 @@ log_light_state_to_local_couchdb = True
 log_light_state_to_local_file = True
 
 
-# ######## Fan Controller #########
-# Speciy the target max chamber air temperature in Celsius.
-# The fan will be turned on when the temperature exceeds this value.
-#
-max_air_temperature = 30
-
 # ######## Camera Controller #########
 # leave the following import alone. they contain all available subscribers
 #
