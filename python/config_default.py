@@ -43,11 +43,11 @@
 # 8) Picture uploading: The system supports posting images to a server that supports the fopd picture posting 
 #                       spec (TBD: add url of the spec). Picture posting is turned off by default.
 #                       In order to turn it on do the following:
-#                       1) Enable posting -> Set upload_images to True
+#                       1) Enable posting -> Add the fop cloud service camera subscriber to the camera subscriber
+#                          list.
 #                       2) Specify the value for camera_device_id. Get this value from your cloud provider.
-#                       3) Specify a value for the hmac_secret_key_b64_encoded.  You can leave this blank
-#                          if you are not going to use HMAC to sign the JWTs.
-#                       4) Specify a value for image_post_url
+#                       3) Specify a value for the hmac_secret_key_b64_encoded. This key is used to HMAC
+#                          sign the JWT claim set.
 #
 # Included in topics (e.g data/v1/[organization_guid).  If you don't want it in the topic
 # values then set it be an empty string. Note that if you are connectiong to an mvp compatible
@@ -71,8 +71,10 @@ device_id = ''
 si7021_device_id = ''
 camera_device_id = ''
 
-# ########### JWT Settings ##############
-hmac_secret_key_b64_encoded = ''
+# ########### JWT Sjttings ##############
+# Specify a random 32 character string (e.g. GOUrUd44AcFmOz6GjiYQWRJjxOXFMsd3)
+fop_jose_id = ''
+hmac_secret_key = ''
 
 # ########### MQTT Settings #############
 enable_mqtt = False
@@ -131,11 +133,19 @@ log_light_state_to_local_file = True
 max_air_temperature = 30
 
 # ######## Camera Controller #########
-# You must include a slash after the last subdirectory - TBD: clean this up. 
-camera_controller_program = ('hourly', 0)
-copy_current_image = True
-upload_images = False
-image_post_url = ''
+# leave the following import alone. they contain all available subscribers
+#
+# TBD: Need to add logic to the code base that skips the creation of the camera thread
+# if enable_camera_controller is set to False.
+enable_camera_controller = True
+#
+# frequency -> The current time is reduced to a string of 4 digits as HHMM with leading zeros. Specify
+#              the regular expression that should trigger a subscriber invokation. Once triggred the 
+#              regular expression must experienc a mis-match before the subscriber will be ready to be
+#              triggered again. e.g. r'\d\d00' -> trigger every hour at the start of the first minute of the hour.
+#
+camera_subscribers = ({'sub':'LocalWebServer',  'args':{'frequency':r'\d\d00', 'take_picture_on_start':True}})
+
 
 # ######## Device Ids ############
 # Use the settings below to define the system composition. Once things are working then

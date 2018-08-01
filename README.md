@@ -1,4 +1,4 @@
-# fopd 
+# fopd -> farm operations platform (fop) device
 
 This is a fork of the [MVP II](https://github.com/webbhm/OpenAg-MVP-II).
 

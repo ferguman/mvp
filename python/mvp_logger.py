@@ -1,4 +1,4 @@
-from logging import getLogger, Formatter, INFO 
+from logging import getLogger, Formatter, INFO, DEBUG 
 from logging.handlers import RotatingFileHandler
 from os import getcwd
 
