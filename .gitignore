@@ -11,3 +11,4 @@ config/*.*
 !config/.gitkeep
 pictures/*.*
 !pictures/.gitkeep
+venv/

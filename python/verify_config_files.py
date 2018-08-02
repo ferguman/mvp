@@ -9,11 +9,31 @@ def verify_config_file():
 
    try:
 
-      config_defaultfile_path = getcwd() + '/python/config_default.py'
       config_livefile_path = getcwd() + '/config/config.py'
 
       if not path.isfile(config_livefile_path):
-         logger.warning('No configuration file was found. Reverting to the default configuration file.')
+          
+         # ask the user which config file they want.
+         print('There is no configuration file present. You are probably running this software for the first time.')
+         print('Specify which configuration file type (either mvp or fc1) that you wish to use.')
+
+         while True:
+
+             cmd = input('fopd:')
+
+             if cmd == 'mvp':
+                 config_defaultfile_path = getcwd() + '/python/config_default_mvp.py'
+                 break
+
+             if cmd == 'fc1':
+                 config_defaultfile_path = getcwd() + '/python/config_default_fc1.py'
+                 break
+
+             if cmd != 'mvp' and cmd != 'fc1':
+                 logger.error('Illegal configuration file specified: {}'.format(cmd))
+                 print('Please specify either mvp or fc1.')
+        
+         logger.info('No configuration file was found. Reverting to the mvp onfiguration file.')
          copyfile(config_defaultfile_path, config_livefile_path)
 
    except:
