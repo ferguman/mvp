@@ -53,6 +53,7 @@ Blossom is the current release build.  Carrot will be the next release.
 
   - Image upload to the cloud.
   - Compatibility with the Food Computer Version 1
+  - Make setup simpler and run within a Pthon venv
 
 ## Future Development (in no priority):
 - Next release name: carrot

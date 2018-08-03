@@ -165,6 +165,7 @@ log_light_state_to_local_file = True
 enable_camera_controller = True
 camera_device_id = ''
 camera_subscribers = ({'sub':'LocalWebServer',  'args':{'frequency':r'\d\d00', 'take_picture_on_start':True}})
+
 # ######## Fan Controller #########
 # Speciy the target max chamber air temperature in Celsius.
 # The fan will be turned on when the temperature exceeds this value.
