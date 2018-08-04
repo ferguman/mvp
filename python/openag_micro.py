@@ -1,5 +1,6 @@
-from logging import getLogger
-from time import sleep
+from logging import getLogger 
+from time import sleep, time
+import re
 import serial
 
 """
@@ -12,7 +13,15 @@ print(b.decode('utf-8'))
 
 logger = getLogger('mvp.' + __name__)
 
-def start(app_state, args):
+p = re.compile(r'(\d+\.\d+)')
+
+# check on the fc and see if it is ok
+# run unit tests and report failure in the log
+# TBD:if the unit tests fail then print a log message and exit the program!
+#
+def initialize(args):
+
+    logger.setLevel(args['log_level'])
 
     #- print('open ag micro starting...')
     logger.info('starting openag microcontroller monitor for food computer version 1')
@@ -42,15 +51,52 @@ def start(app_state, args):
         logger.info('fc: {}'.format(result.decode('utf-8')))
         ser.reset_input_buffer()
 
-    # check on the fc and see if it is ok
-    # run unit tests and report failure in the log
-    # if the unit tests fail then print a log message and exit the program!
+    return ser
+
+def extract_sensor_values(app_state, result):
+
+    logger.debug('fc sensor values: {}'.format(result))
+
+    # TBD: Maybe the thing to do is to pull the timestamp through from the arduiono
+    #      if the time stamp does not move forward then detect this and blank out the
+    #      sensor readings.
+    ts = time()
+    for r in app_state['sensor_readings']:
+        r['ts'] = ts
+    
+    global p
+    values = p.findall(result)
+
+    if len(values) == 2:
+        # Save each reading with a timestamp.
+        # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
+        app_state['sensor_readings'][0]['value'] = values[0]
+        app_state['sensor_readings'][1]['value'] = values[1]
+    else:
+        logger.error('Error reading fc sensors. fc returned: {}'.format(result))
+        for r in app_state['sensor_readings']:
+            r['value'] = None
+
+def start(app_state, args):
+
+    #humidifier, grow_light, ac_3, air_heat
+    cur_command = b'0,0,0,0,0\n'
+
+    app_state['sensor_readings'] = [
+            {'type':'environment', 'attribute':'humidity', subject:'air', 'value':None, 'ts':None},
+            {'type':'environment', 'attribute':'temperature', subject:'air', 'value':None, 'ts':None}
+            ]
+
+    ser = initialize(args)
 
     while not app_state['stop']:
 
         # Send the actuator command.
+        ser.write(cur_command)
         # if success then 
+        result = ser.read_until(b'\n').rstrip().decode('utf-8')
         # Save the sensor readings
+        extract_sensor_values(app_state, result)
         # else log an error but don't flood the log.
 
         sleep(1)

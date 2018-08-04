@@ -20,8 +20,6 @@ def time_to_sample(state):
                   + 'set to a value between 1 and 86400. 86400 seconds is 24 hours.')
       return False
 
-   #- global state
-
    if state['next_sample_time'] <= time():
       #- state = {'next_sample_time':(datetime.datetime.now() +\
       #-                             datetime.timedelta(seconds=data_logger_sample_interval)).time(),
