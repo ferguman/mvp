@@ -21,13 +21,6 @@
 #    [Install]
 #    WantedBy=multi-user.target
 #
-# It spawns the following threads:
-# MQTT Client
-# Light Controller
-# Sensor Data Logger
-# Fan Controller
-# Camera Controller
-# Website Chart Controller 
 #
 # The mvp provides a REPL loop for interactive operation. This loop can be turned off
 # by invoking the mvp in silent mode.
@@ -56,46 +49,40 @@ from importlib import import_module
 import threading
 
 # Load mvp libraries
-from config.config import device_id, system
-from python.adjustThermostat import start_fan_controller
+from config.config import system
+#- from python.adjustThermostat import start_fan_controller
 from python.args import get_args
-from python.camera_controller import start_camera_controller
-from python.light_controller import start_light_controller
-from python.logSensors import start_sensor_data_logger
-from python.mqtt_client import start_mvp_mqtt_client
+#- from python.camera_controller import start_camera_controller
+#- from python.light_controller import start_light_controller
+#- from python.logSensors import start_sensor_data_logger
+#- from python.mqtt_client import start_mvp_mqtt_client
 from python.repl import repl
-from python.web_chart_controller import start_web_chart_controller
+#- from python.web_chart_controller import start_web_chart_controller
 
 # Process the command line args
 args = get_args()
 
-logger.info('############## mvp device id: {}'.format(device_id))
+logger.info('############## fopd device id: {}'.format(system['device_id']))
 
 app_state = {'stop': False, 'silent_mode':args.silent}
 
-app_state['mqtt'] = start_mvp_mqtt_client(app_state)
+# create a Barrier that all the threads can syncronize on. This is to
+# allow threads such as mqtt or data loggers to get initialized before
+# other threads try to call them.
+#
+b = threading.Barrier(len(system['resources']), timeout=20) 
 
-# Create all the threads
+# Each resource is implemented as a thread. Setup all the threads.
 tl = []
 for r in system['resources']:
-    m = import_module(r['imp'])
-    tl.append(threading.Thread(target=m.start, name=r['name'], args=(app_state, r['args'])))
-    app_state[r['name']] = tl[-1]
 
-# t2 = threading.Thread(target=start_light_controller, name="light_controller", args=(app_state, ))
-# t3 = threading.Thread(target=start_sensor_data_logger, name="sensor_logger", args=(mqtt_client, app_state))
-# t4 = threading.Thread(target=start_fan_controller, name="fan_controller", args=(app_state, ))
-# t5 = threading.Thread(target=start_camera_controller, name="camera_controller", args=(app_state, ))
-# t6 = threading.Thread(target=start_web_chart_controller, name="web_chart_controller", args=(app_state,))
+    m = import_module(r['imp'])
+
+    tl.append(threading.Thread(target=m.start, name=r['name'], args=(app_state, r['args'], b)))
 
 # Start all threads
 for t in tl:
     t.start()
-# t2.start()
-# t3.start()
-# t4.start()
-# t5.start()
-# t6.start()
 
 if not args.silent:
     repl(app_state)
@@ -104,8 +91,3 @@ if not args.silent:
 #
 for t in tl:
     t.join()
-# t2.join()
-# t3.join()
-# t4.join()
-# t5.join()
-# t6.join()

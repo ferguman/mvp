@@ -31,7 +31,7 @@ def verify_config_file():
 
              if cmd != 'mvp' and cmd != 'fc1':
                  logger.error('Illegal configuration file specified: {}'.format(cmd))
-                 print('Please specify either mvp or fc1.')
+                 print('Please specify either mvp or fc1. Or manually create a custom configuration file.')
         
          logger.info('No configuration file was found. Reverting to the mvp onfiguration file.')
          copyfile(config_defaultfile_path, config_livefile_path)

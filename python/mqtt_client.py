@@ -47,7 +47,36 @@ def get_mqtt_password(app_state):
         logger.warning('No MQTT password is contained in the config file. No MQTT functions will be avaiable.')
         return None
 
+# Start the mqtt client and put a reference to it in app_state.
+# If you don't start the mqtt client then don't do anything but log a message. 
+#
+def start(app_state, args, b):
 
+    logger.info('starting mqtt client')
+
+    if args['enable']:
+
+        pw = get_mqtt_password(app_state)
+
+        if pw is not None:
+            # Note that the paho mqtt client has the ability to spawn it's own thread.
+            result = start_paho_mqtt_client(pw)
+            if result[0] == True:
+                app_state['mqtt'] = {'client':result[1], 'organization_id':args['organization_id']}
+                #- return result[1] 
+            else:
+                logger.error('Unable to start an MQTT client. Exiting....')
+                exit()
+    else:
+        logger.warning('mqtt is disabled.')
+
+    # Let the system know that you are good to go. 
+    b.wait()
+
+    #TBD: It might make sense to keep this thread alive as a "nanny" for the underlying paho thread.
+
+# - get rid of this funcation after the start() function is tested.
+#
 def start_mvp_mqtt_client(app_state):
 
     if enable_mqtt == True:
@@ -67,10 +96,10 @@ def start_mvp_mqtt_client(app_state):
     else:
         return None
 
+
 mqtt_connection_results = ('connection successful', 'connection refused - incorrect protocol version',
                            'connection refused - invalid client identifier', 'connection refused - server unavailable',
                            'connection refused - bad username or password', 'connection refused - not authorised')
-
 
 def connection_result(rc):
     if rc >= 0 and rc <= 5:

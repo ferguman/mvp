@@ -52,3 +52,24 @@ def send_sensor_data_via_mqtt(device, mqtt_client, sensor_name, attribute_name, 
    logger.info('published topic: {}'.format(topic))
 
    return 1
+
+def send_sensor_data_via_mqtt_v2(s, mqtt):
+
+
+   payload_value = '{"sensor":"'              + s['device_name'] + '", '\
+                    '"device_id":"'           + s['device_id'] + '", '\
+                    '"subject":"'             + s['subject'] + '", '\
+                    '"subject_location_id":"' + s['subject_location_id'] + '", '\
+                    '"attribute":"'           + s['attribute'] + '", '\
+                    '"value":"'               + s['value'] + '", '\
+                    '"units":"'               + s['units'] + '", '\
+                    '"time":"'                + datetime.datetime.utcfromtimestamp(s['ts']).isoformat() + '"}'
+   
+   
+   topic =  'data/v1/' + mqtt['organization_id']
+
+   pub_response = mqtt['client'].publish(topic, payload=payload_value, qos=2) 
+
+   logger.info('published topic: {}'.format(topic))
+
+   return 1

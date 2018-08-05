@@ -77,17 +77,35 @@ def extract_sensor_values(app_state, result):
         for r in app_state['sensor_readings']:
             r['value'] = None
 
-def start(app_state, args):
+def start(app_state, args, b):
+
+    logger.info('fc microcontroller interface thread starting.')
 
     #humidifier, grow_light, ac_3, air_heat
     cur_command = b'0,0,0,0,0\n'
 
     app_state['sensor_readings'] = [
-            {'type':'environment', 'attribute':'humidity', subject:'air', 'value':None, 'ts':None},
-            {'type':'environment', 'attribute':'temperature', subject:'air', 'value':None, 'ts':None}
+            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+             'subject':'air', 'subject_location_id':args['air_location_id'], 
+             'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
+            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+             'subject':'air', 'subject_location_id':args['air_location_id'], 
+             'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None}
             ]
 
     ser = initialize(args)
+
+    # Take an initial reading.
+    # Send the actuator command.
+    ser.write(cur_command)
+    # if success then 
+    result = ser.read_until(b'\n').rstrip().decode('utf-8')
+    # Save the sensor readings
+    extract_sensor_values(app_state, result)
+    # else log an error but don't flood the log.
+
+    # Let the system know that you are good to go.
+    b.wait()
 
     while not app_state['stop']:
 
@@ -100,3 +118,5 @@ def start(app_state, args):
         # else log an error but don't flood the log.
 
         sleep(1)
+
+    logger.info('fc microcontroller interface thread stopping.')
