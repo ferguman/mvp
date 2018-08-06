@@ -1,3 +1,13 @@
+# Food Computer Version 1 Data Logger
+#
+# Reads the following app_state variables
+#   stop
+#   sensor_readings
+#   mqtt
+#
+#  No app_state variables are written.
+#
+
 from time import sleep, time
 from logging import getLogger
 from python.send_mqtt_data import send_sensor_data_via_mqtt_v2

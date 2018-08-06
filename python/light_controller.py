@@ -1,63 +1,13 @@
-#Controls the turning on and turning off of lights
-#Lights are wired into Relay #4 (Pin 29)
-
-import RPi.GPIO as GPIO
-from python.logData import logData
-from time import sleep 
+# This is a fopd resource
+#    It requires an on/off light controller -> eg. controller('on') and controller('off')
+#
 from datetime import datetime
-import sys
 from logging import getLogger
-
-from config.config import light_controller_program, log_light_state_to_local_couchdb, log_light_state_to_local_file
+from time import sleep
 
 logger = getLogger('mvp.' + __name__)
 
-def log_lights(state: str):
-
-   log_list = ['{:%Y-%m-%d %H:%M:%S}'.format(datetime.now()) , 'Light_Switch',
-               'Success', 'light', None, {}.format(state), None, '']
-
-   if log_light_state_to_local_couchdb:
-      logDB(**log_list)
-
-   if log_light_state_to_local_file:
-      logFile(**log_list)
-
-def setLightOff():
-
-   "Check the time and determine if the lights need to be changed"
-   lightPin = 29
-   GPIO.setwarnings(False)
-   GPIO.setmode(GPIO.BOARD)
-   GPIO.setup(lightPin, GPIO.OUT)
-   # For the relaly board, use the first line
-   # For the Sparkfun PowerSwitch tail (https://www.sparkfun.com/products/10747)
-   # Uncomment the second line, and comment out the first
-   GPIO.output(lightPin, GPIO.LOW)
-   #    GPIO.output(lightPin, GPIO.HIGH)
-   logger.info('Turned light off')
-
-   logData("Light_Switch", "Success", "light", None, "Off", None, '')
-
-
-def setLightOn():
-
-   "Check the time and determine if the lights need to be changed"
-   lightPin = 29
-   GPIO.setwarnings(False)
-   GPIO.setmode(GPIO.BOARD)
-   GPIO.setup(lightPin, GPIO.OUT)
-   # For the relaly board, use the first line
-   # For the Sparkfun PowerSwitch tail (https://www.sparkfun.com/products/10747)
-   # Uncomment the second line, and comment out the first    
-   GPIO.output(lightPin, GPIO.HIGH)
-   #    GPIO.output(lightPin, GPIO.LOW)    
-   logger.info('Turned light on')
-
-   logData("Light_Switch", "Success", "light", None, "On", None, '')
-
-
-def run_controller(light_state, program):
+def run_controller(light_state, lc, program):
 
    this_update_time = datetime.now().time()
 
@@ -73,37 +23,45 @@ def run_controller(light_state, program):
 
       set_time = datetime.strptime(x[1], '%I:%M %p').time()
 
+      #logger.debug('command:{}, this_update_time:{}, set_time:{}, last_upate:{}, Light On:{}'.format(
+      #             x, this_update_time, set_time, light_state['last_update'], light_state['light_on']))
+
       if light_state['last_update'] <= set_time and this_update_time >= set_time:
 
          if x[0] == 'on':
-            light_cmd = setLightOn
+            lc('on')
             light_on = True
          else:
             if x[0] == 'off':
-               light_cmd = setLightOff
+               lc('off')
                light_on = False
             else:
                logging.error('ERROR. Illegal value ({}) for light command.'.format(x[0]))
                return {'error':True, 'light_on':light_state['light_on'], 'last_update':this_update_time}
 
          logger.info('{:%Y-%m-%d %H:%M:%S} Turning light {}.'.format(datetime.now(), x[0])) 
-         light_cmd()
          return {'error':False, 'light_on':light_on, 'last_update':this_update_time}
 
-   #At this point you haven't 'fired' on any commands.
+   #at this point you haven't 'fired' on any commands.
    return {'error':False, 'light_on':light_state['light_on'], 'last_update':this_update_time}
- 
 
-def start_light_controller(app_state):
+def start(app_state, args, b):
 
-   logger.info('Starting light controller.')
+    logger.setLevel(args['log_level'])
+    logger.info('Starting light controller.')
 
-   # light_state
-   setLightOff()
-   light_state = {'error':False, 'light_on':False, 'last_update':datetime.now().time()}
+    # Don't proceed until the actuator is up and running.
+    b.wait()    
 
-   while not app_state['stop']:
+    # light_state
+    lc = app_state[args['actuator']]
+    lc('off')
+    light_state = {'error':False, 'light_on':False, 'last_update':datetime.now().time()}
 
-      light_state = run_controller(light_state, light_controller_program)
+    while not app_state['stop']:
 
-      sleep(1)
+        light_state = run_controller(light_state, lc, args['program'])
+        
+        sleep(1)
+
+    logger.info('light controller thread stopping.')

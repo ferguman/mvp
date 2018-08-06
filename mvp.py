@@ -78,7 +78,7 @@ for r in system['resources']:
 
     m = import_module(r['imp'])
 
-    tl.append(threading.Thread(target=m.start, name=r['name'], args=(app_state, r['args'], b)))
+    tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
 # Start all threads
 for t in tl:
