@@ -7,7 +7,6 @@ class CameraSubscriber():
 
     logger = getLogger('mvp.' + __name__)
 
-    #- def __init__(self, frequency: 'raw string', url=None, take_picture_on_start=True) -> None:
     def __init__(self, **kwargs):
 
         self.regex = re.compile(kwargs.get('frequency'))
@@ -15,6 +14,7 @@ class CameraSubscriber():
         self.take_picture_on_start = kwargs.get('take_picture_on_start')
 
         self.in_scheduled_picture_window = False
+        self.device_id = kwargs.get('device_id')
 
     def wants_picture(self, time_stamp, startup_flag):
 

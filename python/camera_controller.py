@@ -1,3 +1,6 @@
+# fopd resource
+#
+
 from os import getcwd
 from datetime import datetime
 from time import sleep
@@ -56,26 +59,30 @@ def snap() -> 'file_path':
          logger.error('Camera error: {}: {}'.format(exc_info()[0], exc_info()[1]))
          return None
 
-def start_camera_controller(app_state):
+def start(app_state, args, b):
 
-   logger.info('Starting camera controller.')
+    logger.setLevel(args['log_level'])
+    logger.info('Starting camera controller.')
 
-   state = {'startup':True}
+    state = {'startup':True}
    
-   camera_subscribers = get_camera_subscribers()
+    camera_subscribers = get_camera_subscribers(args['subscribers'])
 
-   while not app_state['stop']:
+    # Don't proceed until all the other threads are up ready.
+    b.wait()    
 
-      this_instant = datetime.now() 
-      file_location = None
+    while not app_state['stop']:
 
-      for s in camera_subscribers:
-          if s.wants_picture(this_instant, state['startup']):
-              if file_location == None:
-                   file_location = snap()
-              s.new_picture(file_location)
+        this_instant = datetime.now() 
+        file_location = None
 
-      # TBD - put in code to delete any picture files that were created.
+        for s in camera_subscribers:
+            if s.wants_picture(this_instant, state['startup']):
+                if file_location == None:
+                     file_location = snap()
+                s.new_picture(file_location)
+
+        # TBD - put in code to delete any picture files that were created.
       
-      state['startup'] = False
-      sleep(1)  
+        state['startup'] = False
+        sleep(1)  

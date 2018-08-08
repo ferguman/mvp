@@ -1,22 +1,38 @@
+# fopd resource
+#
+# provides the following functions:
+#    grow_light - on/off light controller named grow_light.
+#    sensor_readings - A list of the fc sensor readings updated every 1 second.
+#
 from logging import getLogger 
 from time import sleep, time
 import re
 import serial
-
-"""
-ser = serial.Serial('/dev/ttyACM0', 115200)
-ser.write(b'(help)\n')
-b = ser.read_until(b'OK')
-print(b.decode('utf-8'))
-
-"""
 
 logger = getLogger('mvp.' + __name__)
 
 p = re.compile(r'(\d+\.\d+)')
 
 # FC1 Command Set -> humidifier, grow_light, ac_3, air_heat
-cur_command = b'0,0,0,0,0\n'
+cur_command = [0,0,0,0]
+
+# Create a binary string of the form: b'0,0,0,0\n'
+def make_fc_cmd():
+
+    global cur_command
+
+    cmd = b'0'
+
+    for b in cur_command:
+        if b == 0:
+            cmd = cmd + b',false'
+        elif b == 1:
+            cmd = cmd + b',true'
+        else:
+           logger.error('bad command bit: {}'.format(b))
+           return b'0'
+
+    return cmd + b'\n'
 
 # check on the fc and see if it is ok
 # run unit tests and report failure in the log
@@ -58,7 +74,7 @@ def initialize(args):
 
 def extract_sensor_values(app_state, result):
 
-    logger.debug('fc sensor values: {}'.format(result))
+    # logger.debug('fc sensor values: {}'.format(result))
 
     # TBD: Maybe the thing to do is to pull the timestamp through from the arduiono
     #      if the time stamp does not move forward then detect this and blank out the
@@ -82,23 +98,20 @@ def extract_sensor_values(app_state, result):
 
 def grow_light_controller(cmd):
 
-    logger.info('light controller command received: {}'.format(cmd))
+    global cur_command
 
     if cmd == 'on':
-         cur_command = cur_command(inject 1 at nth postion)
-    #     logger.info(light's on)
-    # eif cmd = 'off':
-    #     cur_command = inject 0 at nth position
-    #     logger.info(light's off)
-    # else
-    #     logger.error(light error)
+        cur_command[1] = 1
+        logger.info('light on command received')
+    elif cmd == 'off':
+        cur_command[1] = 0
+        logger.info('light off command received')
+    else:
+        logger.error('unknown command received: {}'.format(cmd))
 
 def start(app_state, args, b):
 
     logger.info('fc microcontroller interface thread starting.')
-
-    #humidifier, grow_light, ac_3, air_heat
-    # - cur_command = b'0,0,0,0,0\n'
 
     app_state['sensor_readings'] = [
             {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
@@ -111,13 +124,14 @@ def start(app_state, args, b):
 
     ser = initialize(args)
 
-    # Send actuator command set to the Arduion and get back the sensor readings. 
-    ser.write(cur_command)
+    # Send actuator command set to the Arduino and get back the sensor readings. 
+    ser.write(make_fc_cmd())
     result = ser.read_until(b'\n').rstrip().decode('utf-8')
+    ser.reset_input_buffer()
     extract_sensor_values(app_state, result)
 
     #Bring up your actuator interfaces
-    app_state[args['name'] + '.grow_light'] = grow_light_controller
+    app_state['grow_light'] = grow_light_controller
 
     # Let the system know that you are good to go.
     b.wait()
@@ -125,12 +139,14 @@ def start(app_state, args, b):
     while not app_state['stop']:
 
         # Send the actuator command.
-        ser.write(cur_command)
-        # if success then 
+        c = make_fc_cmd()
+        # logger.debug('fc cmd: {}'.format(c))
+        ser.write(make_fc_cmd())
         result = ser.read_until(b'\n').rstrip().decode('utf-8')
+        ser.reset_input_buffer()
+        
         # Save the sensor readings
         extract_sensor_values(app_state, result)
-        # else log an error but don't flood the log.
 
         sleep(1)
 

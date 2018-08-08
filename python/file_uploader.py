@@ -1,12 +1,14 @@
 from base64 import standard_b64encode
-from config.config import device_id, camera_device_id, hmac_secret_key, fop_jose_id
 from datetime import datetime, timezone
 from hashlib import sha256
-from logging import getLogger
 from jose import jws 
+from logging import getLogger
 from requests import post
 from time import time
 from uuid import uuid4
+
+#from config.config import device_id, camera_device_id, hmac_secret_key, fop_jose_id
+from config.config import device_id, hmac_secret_key, fop_jose_id
 
 # Note: This module uses JWT security (via jose).  Paseto is another system for implemeting token based security.
 
@@ -21,7 +23,7 @@ def extract_timestamp(path_name) -> 'timestamp':
 
 
 # Make the JWT claim set
-def claim_info(file_hash, time_stamp):
+def claim_info(file_hash, time_stamp, camera_id):
 
     #- TBD: Time delivers seconds since unix epoch. Not all systems have the same epoch start date.  There
     #- may be a better way to time stamp the claims.
@@ -31,7 +33,7 @@ def claim_info(file_hash, time_stamp):
     return {'iss':device_id,                 #Issuer -> This mvp is the issuer. Use it's secret key to authenticate.
             'aud':fop_jose_id,               #Audience -> identifies the cloud provider that will receive this claim.
             'exp':issue_time + 60,           #Expiration Time
-            'sub':camera_device_id,          #Subject -> This mvp's camera is the subject
+            'sub':camera_id,                 #Subject -> This mvp's camera is the subject
             'nbf':issue_time - 60,           #Not Before Time
             'iat':issue_time,                #Issued At
             'jti':str(uuid4()),              #JWT ID -> Don't accept duplicates by jti
@@ -47,17 +49,17 @@ def get_file_hash(path_name):
             
     return standard_b64encode(m.digest()).decode('utf-8')
 
-def get_jws(path_name):
+def get_jws(path_name, camera_id):
 
-    return jws.sign(claim_info(get_file_hash(path_name), extract_timestamp(path_name)), 
+    return jws.sign(claim_info(get_file_hash(path_name), extract_timestamp(path_name), camera_id), 
                     hmac_secret_key,
                     algorithm='HS256')
 
-def upload_camera_image(path_name, url):
+def upload_camera_image(path_name, url, camera_id):
 
     with open(path_name, 'rb') as f:
         r = post('{}'.format(url), 
-                 data={'auth_method':'JWS', 'auth_data':get_jws(path_name)}, 
+                 data={'auth_method':'JWS', 'auth_data':get_jws(path_name, camera_id)}, 
                  files={'file':f}) 
 
     result = r.content.decode('utf-8')

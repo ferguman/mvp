@@ -8,7 +8,7 @@ def make_subscriber(dict):
 
     return class_(**dict['args'])
 
-def get_camera_subscribers():
+def get_camera_subscribers(camera_subscribers):
 
     subs = []
     for s in camera_subscribers:

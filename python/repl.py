@@ -26,14 +26,24 @@ def repl(app_state):
           if cmd == '(help)':
              print('(help) -> display this help message.')
              print('(exit) -> exit this program.')
+
           elif cmd == '(exit)':
              app_state['stop'] = True
              logger.info('shutting down')
              print('shutting down, please wait a few seconds.')
              break
+
+          elif cmd[:3] == '(p ':
+              try:
+                 # Need to sandbox the python interpretter as much as possible. Also maybe 
+                 # strip out the lispy stuff and go all python.:w
+                 
+                 eval(cmd[3:-1], app_state)
+              except:
+                  logger.error('python command: {}, {}, {}'.format(cmd[3:-1], exc_info()[0], exc_info()[1]))
           else:
              print('unknown command. Enter: (help) to see a list of available commands.')
        except:
-           logger.error('Error: {}, {}'.format(exc_info()[0], exc_info()[1]))
+           logger.error('repl: {}, {}'.format(exc_info()[0], exc_info()[1]))
            app_state['stop'] = True
            break

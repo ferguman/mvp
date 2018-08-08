@@ -1,5 +1,6 @@
 # This is a fopd resource
-#    It requires an on/off light controller -> eg. controller('on') and controller('off')
+#
+# it requires an on/off light controller -> eg. controller('on') and controller('off')
 #
 from datetime import datetime
 from logging import getLogger
