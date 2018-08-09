@@ -19,16 +19,8 @@ Python code that can be configured to peform the same functions as the MVP II.  
 
 ## Architecture:
 
-The main program (mvp.py) starts threads that handle the following tasks:
-  - MQTT client
-  - Image capture
-  - Log Sensors
-  - Light Controller
-  - Fan Controller
-  - Refresh charts and picture for the UI (render.sh)
-
-Local data storage is in a csv formatted (without header) flat file (/home/pi/MVP/data/data.txt) - this will likely be deprected in the future.
-CouchDB is the main data storage system, and will provide easy replication to the cloud in the future.
+Upon boot the main program (mvp.py) reads the local configuration file (config/config.py) and spawns threads for
+each resource located in the configuration file.
 
 ## Hardware Build:
 
@@ -38,7 +30,8 @@ actuators.
 
 ### Versions
 
-Blossom is the current release build.  Carrot will be the next release.
+- Blossom is the current release build.  
+- Carrot will be the next release.
 
 [blossom build](https://github.com/ferguman/openag-mvp/wiki/Install-mvp-blossom)
 

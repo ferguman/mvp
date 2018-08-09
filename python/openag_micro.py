@@ -109,6 +109,19 @@ def grow_light_controller(cmd):
     else:
         logger.error('unknown command received: {}'.format(cmd))
 
+def make_oa_help(args):
+
+    def oa_help():
+
+        prefix = args['name']
+
+        s =     '{}.help()                 - Displays this help page.\n'.format(prefix)
+        s = s + "{}.grow_light('on'|'off') - Turns the grow light on or off.\n".format(prefix)
+        
+        return s
+
+    return oa_help
+
 def start(app_state, args, b):
 
     logger.info('fc microcontroller interface thread starting.')
@@ -130,8 +143,10 @@ def start(app_state, args, b):
     ser.reset_input_buffer()
     extract_sensor_values(app_state, result)
 
-    #Bring up your actuator interfaces
-    app_state['grow_light'] = grow_light_controller
+    # Inject your commands into app_state.
+    app_state['cmds'][args['name']] = {} 
+    app_state['cmds'][args['name']]['help'] = make_oa_help(args) 
+    app_state['cmds'][args['name']]['grow_light'] = grow_light_controller
 
     # Let the system know that you are good to go.
     b.wait()

@@ -64,7 +64,8 @@ args = get_args()
 
 logger.info('############## fopd device id: {}'.format(system['device_id']))
 
-app_state = {'stop': False, 'silent_mode':args.silent}
+s = {'name': system['name']}
+app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent}
 
 # create a Barrier that all the threads can syncronize on. This is to
 # allow threads such as mqtt or data loggers to get initialized before

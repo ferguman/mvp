@@ -55,7 +55,8 @@ def start(app_state, args, b):
     b.wait()    
 
     # light_state
-    lc = app_state[args['actuator']]
+    #- lc = app_state[args['actuator']]
+    lc = app_state['cmds'][args['actuator_resource']][args['actuator_cmd']]
     lc('off')
     light_state = {'error':False, 'light_on':False, 'last_update':datetime.now().time()}
 
