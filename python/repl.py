@@ -1,3 +1,7 @@
+# Evaluate Python Fire https://github.com/google/python-fire.  It generates CLI's for
+# Python objects.
+#
+
 from getpass import getpass
 from logging import getLogger
 from sys import exc_info

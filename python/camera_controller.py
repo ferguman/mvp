@@ -59,6 +59,19 @@ def snap() -> 'file_path':
          logger.error('Camera error: {}: {}'.format(exc_info()[0], exc_info()[1]))
          return None
 
+def make_help(args):
+    
+    def help():
+
+        prefix = args['name']
+
+        s =     '{}.help()                 - Displays this help page.\n'.format(prefix)
+        s = s + "{}.snap()                 - Takes a picture and returns the location of the file.\n".format(prefix)
+        
+        return s
+
+    return help
+
 def start(app_state, args, b):
 
     logger.setLevel(args['log_level'])
@@ -67,6 +80,11 @@ def start(app_state, args, b):
     state = {'startup':True}
    
     camera_subscribers = get_camera_subscribers(args['subscribers'])
+    
+    # Inject your commands into app_state.
+    app_state['cmds'][args['name']] = {} 
+    app_state['cmds'][args['name']]['help'] = make_help(args) 
+    app_state['cmds'][args['name']]['snap'] = snap
 
     # Don't proceed until all the other threads are up ready.
     b.wait()    

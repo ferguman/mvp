@@ -109,9 +109,9 @@ def grow_light_controller(cmd):
     else:
         logger.error('unknown command received: {}'.format(cmd))
 
-def make_oa_help(args):
+def make_help(args):
 
-    def oa_help():
+    def help():
 
         prefix = args['name']
 
@@ -120,7 +120,7 @@ def make_oa_help(args):
         
         return s
 
-    return oa_help
+    return help
 
 def start(app_state, args, b):
 
@@ -145,7 +145,7 @@ def start(app_state, args, b):
 
     # Inject your commands into app_state.
     app_state['cmds'][args['name']] = {} 
-    app_state['cmds'][args['name']]['help'] = make_oa_help(args) 
+    app_state['cmds'][args['name']]['help'] = make_help(args) 
     app_state['cmds'][args['name']]['grow_light'] = grow_light_controller
 
     # Let the system know that you are good to go.
