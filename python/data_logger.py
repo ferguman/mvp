@@ -10,7 +10,7 @@
 
 from time import sleep, time
 from logging import getLogger
-from python.send_mqtt_data import send_sensor_data_via_mqtt_v2
+from python.logData import logDB
 
 logger = getLogger('mvp.' + __name__)
 
@@ -56,11 +56,13 @@ def start(app_state, args, b):
                         logger.warning('Empty time stamp for {} {}'.format(r['subject'], r['attribute']))
                         continue
 
+                    #Log the value to local couchdb
+                    if args['log_data_to_local_couchdb']:
+                        logDB(r)
+
                     #Log the value remotely.
                     if args['log_data_via_mqtt'] and ('mqtt' in app_state):
-                        #TBD: Need to make sure this statement completes before other threads get a wack
-                        #     at the processor.
-                        send_sensor_data_via_mqtt_v2(r, app_state['mqtt'])
+                        app_state['mqtt']['publish_queue'].put(r)
                     elif not ('mqtt' in app_state):
                         logger.warning('no mqtt client avaiable.')
             else:

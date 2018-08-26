@@ -55,7 +55,6 @@ from python.args import get_args
 #- from python.camera_controller import start_camera_controller
 #- from python.light_controller import start_light_controller
 #- from python.logSensors import start_sensor_data_logger
-#- from python.mqtt_client import start_mvp_mqtt_client
 from python.repl import repl
 #- from python.web_chart_controller import start_web_chart_controller
 

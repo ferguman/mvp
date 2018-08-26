@@ -1,13 +1,16 @@
 from datetime import datetime
 from logging import getLogger
+from queue import Queue, Empty
 from subprocess import * 
 from sys import path, exc_info
+from time import sleep
 import paho.mqtt.client
 import paho.mqtt.client as mqtt
 
 from config.config import enable_mqtt, encrypted_mqtt_password, mqtt_client_id, mqtt_username,\
                           mqtt_url, mqtt_port, plain_text_mqtt_password
 from python.repl import get_passphrase
+from python.send_mqtt_data import send_sensor_data_via_mqtt_v2
 
 logger = getLogger('mvp' + '.' + __name__)
 
@@ -45,55 +48,6 @@ def get_mqtt_password(app_state):
     else: 
         #- checked
         logger.warning('No MQTT password is contained in the config file. No MQTT functions will be avaiable.')
-        return None
-
-# Start the mqtt client and put a reference to it in app_state.
-# If you don't start the mqtt client then don't do anything but log a message. 
-#
-def start(app_state, args, b):
-
-    logger.info('starting mqtt client')
-
-    if args['enable']:
-
-        pw = get_mqtt_password(app_state)
-
-        if pw is not None:
-            # Note that the paho mqtt client has the ability to spawn it's own thread.
-            result = start_paho_mqtt_client(pw)
-            if result[0] == True:
-                app_state['mqtt'] = {'client':result[1], 'organization_id':args['organization_id']}
-                #- return result[1] 
-            else:
-                logger.error('Unable to start an MQTT client. Exiting....')
-                exit()
-    else:
-        logger.warning('mqtt is disabled.')
-
-    # Let the system know that you are good to go. 
-    b.wait()
-
-    #TBD: It might make sense to keep this thread alive as a "nanny" for the underlying paho thread.
-
-# - get rid of this funcation after the start() function is tested.
-#
-def start_mvp_mqtt_client(app_state):
-
-    if enable_mqtt == True:
-
-        pw = get_mqtt_password(app_state)
-
-        if pw is not None:
-            # Note that the paho mqtt client has the ability to spawn it's own thread.
-            result = start_paho_mqtt_client(pw)
-            if result[0] == True:
-                return result[1] 
-            else:
-                logger.error('Unable to start an MQTT client. Exiting....')
-                exit()
-        else:
-            return None
-    else:
         return None
 
 
@@ -155,9 +109,63 @@ def start_paho_mqtt_client(mqtt_password):
         # Start the MQTT client
         mqtt_client.loop_start()
 
-        # TBD - add code here to wait for the mqtt connection to complete before proceeding.
-
         return [True, mqtt_client]
     except:
       logger.error('Unable to create an MQTT client: {} {}, exiting...'.format(exc_info()[0], exc_info()[1]))
       exit()
+
+# Start the mqtt client and put a reference to it in app_state.
+# If you don't start the mqtt client then don't do anything but log a message. 
+#
+def start(app_state, args, b):
+
+    logger.info('starting mqtt client')
+    
+    publish_queue = Queue()
+    mqtt_client = None
+
+    if args['enable']:
+
+        pw = get_mqtt_password(app_state)
+
+        if pw is not None:
+            # Note that the paho mqtt client has the ability to spawn it's own thread.
+            result = start_paho_mqtt_client(pw)
+            if result[0] == True:
+                app_state['mqtt'] = {'client':result[1], 'organization_id':args['organization_id'],
+                                     'publish_queue':publish_queue}
+                mqtt_client = result[1]
+                #- return result[1] 
+            else:
+                logger.error('Unable to start an MQTT client. Exiting....')
+                exit()
+    else:
+        logger.warning('mqtt is disabled.')
+
+    # Let the system know that you are good to go. 
+    b.wait()
+
+    while not app_state['stop']:
+
+        """
+        Queue.get(block=True, timeout=None)
+            Remove and return an item from the queue. If optional args block is true and timeout is None (the default), 
+            block if necessary until an item is available. If timeout is a positive number, it blocks at most timeout 
+            seconds and raises the Empty exception if no item was available within that time. Otherwise (block is false),
+            return an item if one is immediately available, else raise the Empty exception (timeout is ignored in that
+            case).
+        """
+        try:
+            r = publish_queue.get(False)
+            logger.info('publishing reading via mqtt')
+            send_sensor_data_via_mqtt_v2(r, mqtt_client, args['organization_id'])
+            
+            # Bypass the sleep command in order to keep draining the queue in real time.
+            continue
+        except Empty:
+            # this is ok. It just means the publish queue is empty.
+            pass
+        
+        sleep(1)
+
+    logger.info('mqtt client interface thread stopping.')

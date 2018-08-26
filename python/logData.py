@@ -10,7 +10,7 @@ from config.config import log_data_to_local_couchdb, log_data_to_local_file
 logger = getLogger('mvp.' + __name__)
 
 def need_to_log_locally():
-   return log_data_to_local_couchdb or log_data_to_local_file
+    return log_data_to_local_couchdb or log_data_to_local_file
 
 
 # Log data to couchdb and/or file or neither.
@@ -18,14 +18,14 @@ def need_to_log_locally():
 
 def logData(sensor_name, status, attribute, subject, value, units, comment):
 
-   # Need to factor out the next call.    
+    # Need to factor out the next call.    
    timestamp = '{:%Y-%m-%d %H:%M:%S}'.format(datetime.now())
 
    if log_data_to_local_file == True:
-      logFile(timestamp, sensor_name, status, attribute, value, comment)
+       logFile(timestamp, sensor_name, status, attribute, value, comment)
 
    if log_data_to_local_couchdb == True:
-      logDB(timestamp, sensor_name, status, attribute, value, comment)
+       logDB(timestamp, sensor_name, status, attribute, value, comment)
 
 
 def logFile(timestamp, name, status, attribute, value, comment):
@@ -40,20 +40,35 @@ def logFile(timestamp, name, status, attribute, value, comment):
         f.write(s + "\n")
         f.close()
     except:
-       logger.error('Error writing to data file: {}'.format(exc_info()[0]))
+        logger.error('Error writing to data file: {}'.format(exc_info()[0]))
 
 
-def logDB(timestamp, name, status, attribute, value, comment):
+def logDB(r, comment=''):
 
-    s = name + ", " + status + ", " + attribute + ", " + value + "," + comment
-    logger.debug('couchd db write: {}'.format(s))
+    #- s = name + ", " + status + ", " + attribute + ", " + value + "," + comment
+    #- logger.debug('couchd db write: {}'.format(s))
 
-    log_record = {'timestamp' : timestamp,
-            'name' : name,
-            'status' : status,
-            'attribute' : attribute,
-            'value' : value,
+    """
+    app_state['sensor_readings'] = [
+            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+             'subject':'air', 'subject_location_id':args['air_location_id'], 
+             'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
+            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+             'subject':'air', 'subject_location_id':args['air_location_id'], 
+             'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None}
+            ]
+    """
+    log_record = {'timestamp' : r['ts'],
+            'name' : '{} {}'.format(r['subject'],r['attribute']),
+            'status' : 'Success',
+            'attribute' : r['attribute'],
+            'value' : r['value'],
             'comment' : comment}
+
+    logger.info('couchd db write: {}, {}, {}, {}, {}'.format(log_record['name'], 
+                                                             log_record['status'], log_record['attribute'], 
+                                                             log_record['value'], log_record['comment']))
+
     json_data = json.dumps(log_record)
     headers = {'content-type': 'application/json'}
     
@@ -65,4 +80,5 @@ def logDB(timestamp, name, status, attribute, value, comment):
     exception will be raised.
     """
 
-    r = requests.post('http://localhost:5984/mvp_sensor_data', data = json_data, headers=headers)
+    #TBD: Need to parameterize the couchdb database name.  Replication may result in each mvp instance needing a different name.
+    r = requests.post('http://localhost:5984/mvp_sensor_data_fc1', data = json_data, headers=headers)

@@ -86,7 +86,7 @@ def extract_sensor_values(app_state, result):
     global p
     values = p.findall(result)
 
-    if len(values) == 2:
+    if len(values) == 3:
         # Save each reading with a timestamp.
         # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
         app_state['sensor_readings'][0]['value'] = values[0]

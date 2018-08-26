@@ -1,3 +1,7 @@
+# This module is not thread safe. Don't call functions in it from multiple threads.  The idea is that one
+# MQTT thread will call the functions in this module and that thread will be responsible for synchronizing all
+# MQTT requests from all the different threads.
+
 #- from sys import path
 import datetime
 from logging import getLogger
@@ -53,8 +57,7 @@ def send_sensor_data_via_mqtt(device, mqtt_client, sensor_name, attribute_name, 
 
    return 1
 
-def send_sensor_data_via_mqtt_v2(s, mqtt):
-
+def send_sensor_data_via_mqtt_v2(s, mqtt_client, organization_id):
 
    payload_value = '{"sensor":"'              + s['device_name'] + '", '\
                     '"device_id":"'           + s['device_id'] + '", '\
@@ -65,11 +68,8 @@ def send_sensor_data_via_mqtt_v2(s, mqtt):
                     '"units":"'               + s['units'] + '", '\
                     '"time":"'                + datetime.datetime.utcfromtimestamp(s['ts']).isoformat() + '"}'
    
-   
-   topic =  'data/v1/' + mqtt['organization_id']
+   topic =  'data/v1/' + organization_id
 
-   pub_response = mqtt['client'].publish(topic, payload=payload_value, qos=2) 
+   pub_response = mqtt_client.publish(topic, payload=payload_value, qos=2) 
 
    logger.info('published topic: {}'.format(topic))
-
-   return 1
