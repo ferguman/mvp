@@ -42,7 +42,6 @@ def initialize(args):
 
     logger.setLevel(args['log_level'])
 
-    #- print('open ag micro starting...')
     logger.info('starting openag microcontroller monitor for food computer version 1')
 
     ser = serial.Serial(args['serial_port'], args['baud_rate'])
@@ -132,15 +131,13 @@ def make_help(args):
 
 # TBD- Need to create some sort of locking mechanism around the ser object so that user
 #      intiated commands don't conflict with commands sent in the while loop.
-#      Also need to figure out a way to detect the end of the return string.  Checking for
-#      \n won't work because commands such as (help) return multiple lines.
+#      Also need to turn the user entered value in a byte string.
 def make_mc_cmd(ser):
 
     def mc_cmd(cmd_str):
         
-        ser.write(cmd_str)
-        result = ser.read_until(b'\n').rstrip().decode('utf-8')
-        ser.reset_input_buffer()
+        ser.write(cmd_str + b'\n')
+        result = ser.read_until(b'OK\r').rstrip().decode('utf-8')
         return result
 
     return mc_cmd

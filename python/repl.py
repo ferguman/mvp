@@ -81,29 +81,10 @@ def repl(app_state):
         # TBD: Need to sanitize the name to guard against shell attack.
         cmd = input(device_name + ': ')
         
-        """
-        # Need to add checking so that all commands are of the form foo.bar(args)
-        # you could also make this part an interpreter so that args could be evaluated
-        # as foo.bar(yet more args) also.
-        #
-        cmd_parts = cmd.split('.')
-        if len(cmd_parts) != 2:
-            print('cmds must be of the form foo.bar(args)')
-            continue
-
-        f_and_a = cmd_parts[1].split('(')
-        if len(f_and_a) != 2:
-            print('cmds must be of the form foo.bar(args)')
-            continue
-
-        dot_cmd = "cmds['" + cmd_parts[0] + "']" + "['" + f_and_a[0] + "']" + "(" + f_and_a[1] 
-        """
-
         try:
             # Need to sandbox the python interpretter as much as possible. Also maybe 
             # strip out the lispy stuff and go all python.:w
          
-            #- result = eval)(dot_cmd, repl_globals, app_state)
             print(trans_cmds(cmd))
             result = eval(trans_cmds(cmd), repl_globals, app_state)
             if result != None:
