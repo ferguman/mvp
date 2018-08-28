@@ -79,9 +79,6 @@ def on_publish(mqttc, obj, mid):
 def on_disconnect(mqtt, userdata, rc):
    logger.warning('MQTT Disconnected.')
 
-#- def on_log(client, userdata, level, buf):
-#-   print('WARNING: MQTT log at {:%Y-%m-%d %H:%M:%S}:{}'.format(datetime.now(), buf))
-
 
 # TBD - Need to figure out how to time it out
 # after a configurable period of time.
@@ -114,6 +111,15 @@ def start_paho_mqtt_client(mqtt_password):
       logger.error('Unable to create an MQTT client: {} {}, exiting...'.format(exc_info()[0], exc_info()[1]))
       exit()
 
+def make_mqtt_help(res_name):
+
+    def mqtt_help():
+        return """\
+        {0}.publish(sensor_reading) - Publish a sensor reading..
+        """.format(res_name)
+
+    return mqtt_help
+
 # Start the mqtt client and put a reference to it in app_state.
 # If you don't start the mqtt client then don't do anything but log a message. 
 #
@@ -124,6 +130,8 @@ def start(app_state, args, b):
     publish_queue = Queue()
     mqtt_client = None
 
+    app_state[args['name']] = {}
+
     if args['enable']:
 
         pw = get_mqtt_password(app_state)
@@ -132,40 +140,42 @@ def start(app_state, args, b):
             # Note that the paho mqtt client has the ability to spawn it's own thread.
             result = start_paho_mqtt_client(pw)
             if result[0] == True:
-                app_state['mqtt'] = {'client':result[1], 'organization_id':args['organization_id'],
-                                     'publish_queue':publish_queue}
+                app_state[args['name']]['publish_queue'] = publish_queue
                 mqtt_client = result[1]
-                #- return result[1] 
             else:
                 logger.error('Unable to start an MQTT client. Exiting....')
                 exit()
+
+        app_state[args['name']]['help'] = make_mqtt_help(args['name'])
+
+        # Let the system know that you are good to go. 
+        b.wait()
+
+        while not app_state['stop']:
+
+            """
+            Queue.get(block=True, timeout=None)
+                Remove and return an item from the queue. If optional args block is true and timeout is None (the default), 
+                block if necessary until an item is available. If timeout is a positive number, it blocks at most timeout 
+                seconds and raises the Empty exception if no item was available within that time. Otherwise (block is false),
+                return an item if one is immediately available, else raise the Empty exception (timeout is ignored in that
+                case).
+            """
+            try:
+                r = publish_queue.get(False)
+                logger.info('publishing reading via mqtt')
+                send_sensor_data_via_mqtt_v2(r, mqtt_client, args['organization_id'])
+                
+                # Bypass the sleep command in order to keep draining the queue in real time.
+                continue
+            except Empty:
+                # this is ok. It just means the publish queue is empty.
+                pass
+            
+            sleep(1)
+
+        logger.info('mqtt client interface thread stopping.')
+
     else:
         logger.warning('mqtt is disabled.')
 
-    # Let the system know that you are good to go. 
-    b.wait()
-
-    while not app_state['stop']:
-
-        """
-        Queue.get(block=True, timeout=None)
-            Remove and return an item from the queue. If optional args block is true and timeout is None (the default), 
-            block if necessary until an item is available. If timeout is a positive number, it blocks at most timeout 
-            seconds and raises the Empty exception if no item was available within that time. Otherwise (block is false),
-            return an item if one is immediately available, else raise the Empty exception (timeout is ignored in that
-            case).
-        """
-        try:
-            r = publish_queue.get(False)
-            logger.info('publishing reading via mqtt')
-            send_sensor_data_via_mqtt_v2(r, mqtt_client, args['organization_id'])
-            
-            # Bypass the sleep command in order to keep draining the queue in real time.
-            continue
-        except Empty:
-            # this is ok. It just means the publish queue is empty.
-            pass
-        
-        sleep(1)
-
-    logger.info('mqtt client interface thread stopping.')

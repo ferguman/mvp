@@ -72,7 +72,7 @@ def initialize(args):
 
     return ser
 
-def extract_sensor_values(app_state, result):
+def extract_sensor_values(result, vals):
 
     # logger.debug('fc sensor values: {}'.format(result))
 
@@ -80,7 +80,8 @@ def extract_sensor_values(app_state, result):
     #      if the time stamp does not move forward then detect this and blank out the
     #      sensor readings.
     ts = time()
-    for r in app_state['sensor_readings']:
+    #- for r in app_state['sensor_readings']:
+    for r in vals:
         r['ts'] = ts
     
     global p
@@ -89,11 +90,14 @@ def extract_sensor_values(app_state, result):
     if len(values) == 3:
         # Save each reading with a timestamp.
         # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
-        app_state['sensor_readings'][0]['value'] = values[0]
-        app_state['sensor_readings'][1]['value'] = values[1]
+        #- app_state['sensor_readings'][0]['value'] = values[0]
+        #- app_state['sensor_readings'][0]['value'] = values[0]
+        vals[0]['value'] = values[0]
+        vals[1]['value'] = values[1]
     else:
         logger.error('Error reading fc sensors. fc returned: {}'.format(result))
-        for r in app_state['sensor_readings']:
+        #- for r in app_state['sensor_readings']:
+        for r in vals:
             r['value'] = None
 
 def grow_light_controller(cmd):
@@ -115,38 +119,60 @@ def make_help(args):
 
         prefix = args['name']
 
-        s =     '{}.help()                 - Displays this help page.\n'.format(prefix)
-        s = s + "{}.grow_light('on'|'off') - Turns the grow light on or off.\n".format(prefix)
+        s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
+        s = s + "{}.grow_light('on'|'off')    - Turns the grow light on or off.\n".format(prefix)
+        s = s + "{}['sensor_readings'][index] - Returns the sensor reading referenced by index.\n".format(prefix)
+        s = s + "                               0: air humidity\n"
+        s = s + "                               1: air temperature\n"
+        s = s + "{0}.mc_cmd(uc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
         
         return s
 
     return help
 
+# TBD- Need to create some sort of locking mechanism around the ser object so that user
+#      intiated commands don't conflict with commands sent in the while loop.
+#      Also need to figure out a way to detect the end of the return string.  Checking for
+#      \n won't work because commands such as (help) return multiple lines.
+def make_mc_cmd(ser):
+
+    def mc_cmd(cmd_str):
+        
+        ser.write(cmd_str)
+        result = ser.read_until(b'\n').rstrip().decode('utf-8')
+        ser.reset_input_buffer()
+        return result
+
+    return mc_cmd
+
 def start(app_state, args, b):
 
     logger.info('fc microcontroller interface thread starting.')
 
-    app_state['sensor_readings'] = [
-            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-             'subject':'air', 'subject_location_id':args['air_location_id'], 
-             'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
-            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-             'subject':'air', 'subject_location_id':args['air_location_id'], 
-             'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None}
-            ]
-
     ser = initialize(args)
+
+    # Inject your commands into app_state.
+    app_state[args['name']] = {} 
+    app_state[args['name']]['help'] = make_help(args) 
+    app_state[args['name']]['grow_light'] = grow_light_controller
+    app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
+    
+    app_state[args['name']]['sensor_readings'] = [
+               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+                'subject':'air', 'subject_location_id':args['air_location_id'], 
+                'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+                'subject':'air', 'subject_location_id':args['air_location_id'], 
+                'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None}
+    ]
+    vals = app_state[args['name']]['sensor_readings']
+
 
     # Send actuator command set to the Arduino and get back the sensor readings. 
     ser.write(make_fc_cmd())
     result = ser.read_until(b'\n').rstrip().decode('utf-8')
     ser.reset_input_buffer()
-    extract_sensor_values(app_state, result)
-
-    # Inject your commands into app_state.
-    app_state['cmds'][args['name']] = {} 
-    app_state['cmds'][args['name']]['help'] = make_help(args) 
-    app_state['cmds'][args['name']]['grow_light'] = grow_light_controller
+    extract_sensor_values(result, vals)
 
     # Let the system know that you are good to go.
     b.wait()
@@ -161,7 +187,7 @@ def start(app_state, args, b):
         ser.reset_input_buffer()
         
         # Save the sensor readings
-        extract_sensor_values(app_state, result)
+        extract_sensor_values(result, vals)
 
         sleep(1)
 

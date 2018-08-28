@@ -82,11 +82,11 @@ def start(app_state, args, b):
     camera_subscribers = get_camera_subscribers(args['subscribers'])
     
     # Inject your commands into app_state.
-    app_state['cmds'][args['name']] = {} 
-    app_state['cmds'][args['name']]['help'] = make_help(args) 
-    app_state['cmds'][args['name']]['snap'] = snap
+    app_state[args['name']] = {} 
+    app_state[args['name']]['help'] = make_help(args) 
+    app_state[args['name']]['snap'] = snap
 
-    # Don't proceed until all the other threads are up ready.
+    # Don't proceed until all the other threads are up and ready.
     b.wait()    
 
     while not app_state['stop']:

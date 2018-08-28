@@ -54,9 +54,8 @@ def start(app_state, args, b):
     # Don't proceed until the actuator is up and running.
     b.wait()    
 
-    # light_state
-    #- lc = app_state[args['actuator']]
-    lc = app_state['cmds'][args['actuator_resource']][args['actuator_cmd']]
+    # light_state - get the actuator command function:w
+    lc = app_state[args['actuator_resource']][args['actuator_cmd']]
     lc('off')
     light_state = {'error':False, 'light_on':False, 'last_update':datetime.now().time()}
 
