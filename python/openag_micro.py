@@ -5,13 +5,14 @@
 #    sensor_readings - A list of the fc sensor readings updated every 1 second.
 #
 from logging import getLogger 
+from threading import Lock
 from time import sleep, time
 import re
 import serial
 
 logger = getLogger('mvp.' + __name__)
 
-p = re.compile(r'(\d+\.\d+)')
+serial_interface_lock = Lock()
 
 # FC1 Command Set -> humidifier, grow_light, ac_3, air_heat
 cur_command = [0,0,0,0]
@@ -71,6 +72,9 @@ def initialize(args):
 
     return ser
 
+# TBD - Think about putting this regular expression into the configuration file.
+p = re.compile(r'(\d+\.\d+)|\d+')
+
 def extract_sensor_values(result, vals):
 
     # logger.debug('fc sensor values: {}'.format(result))
@@ -86,13 +90,11 @@ def extract_sensor_values(result, vals):
     global p
     values = p.findall(result)
 
-    if len(values) == 3:
+    if len(values) == 8:
         # Save each reading with a timestamp.
         # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
-        #- app_state['sensor_readings'][0]['value'] = values[0]
-        #- app_state['sensor_readings'][0]['value'] = values[0]
-        vals[0]['value'] = values[0]
-        vals[1]['value'] = values[1]
+        vals[0]['value'] = values[1] # snip the humidity 
+        vals[1]['value'] = values[2] # snip the temperature
     else:
         logger.error('Error reading fc sensors. fc returned: {}'.format(result))
         #- for r in app_state['sensor_readings']:
@@ -123,7 +125,7 @@ def make_help(args):
         s = s + "{}['sensor_readings'][index] - Returns the sensor reading referenced by index.\n".format(prefix)
         s = s + "                               0: air humidity\n"
         s = s + "                               1: air temperature\n"
-        s = s + "{0}.mc_cmd(uc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
+        s = s + "{0}.mc_cmd(mc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
         
         return s
 
@@ -135,10 +137,20 @@ def make_help(args):
 def make_mc_cmd(ser):
 
     def mc_cmd(cmd_str):
-        
-        ser.write(cmd_str + b'\n')
-        result = ser.read_until(b'OK\r').rstrip().decode('utf-8')
-        return result
+
+        # wait until the serial interface is free.
+        serial_interface_lock.acquire()
+        result = None
+        try:
+            cmd_str_bytes = bytes(cmd_str, "ascii")
+            #- print(' '.join(["{0:b}".format(x) for x in cmd_str_bytes]))
+            ser.write(cmd_str_bytes + b'\n')
+            #- ser.write(cmd_str + b'\n')
+            result = ser.read_until(b'OK\r').rstrip().decode('utf-8')
+            ser.reset_input_buffer()
+        finally:
+            serial_interface_lock.release()
+            return result
 
     return mc_cmd
 
@@ -166,6 +178,8 @@ def start(app_state, args, b):
 
 
     # Send actuator command set to the Arduino and get back the sensor readings. 
+    # TBD - add code to acquire a lock on serial_interface_lock before the serial
+    # line is used.
     ser.write(make_fc_cmd())
     result = ser.read_until(b'\n').rstrip().decode('utf-8')
     ser.reset_input_buffer()
@@ -176,15 +190,19 @@ def start(app_state, args, b):
 
     while not app_state['stop']:
 
-        # Send the actuator command.
-        c = make_fc_cmd()
-        # logger.debug('fc cmd: {}'.format(c))
-        ser.write(make_fc_cmd())
-        result = ser.read_until(b'\n').rstrip().decode('utf-8')
-        ser.reset_input_buffer()
-        
-        # Save the sensor readings
-        extract_sensor_values(result, vals)
+        serial_interface_lock.acquire()
+
+        try:
+            # Send the actuator command.
+            c = make_fc_cmd()
+            ser.write(make_fc_cmd())
+            result = ser.read_until(b'\n').rstrip().decode('utf-8')
+            ser.reset_input_buffer()
+            
+            # Save the sensor readings
+            extract_sensor_values(result, vals)
+        finally:
+            serial_interface_lock.release()
 
         sleep(1)
 

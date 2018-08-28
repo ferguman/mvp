@@ -45,7 +45,7 @@ def start(app_state, args, b):
 
             logger.info('Logging sensor readings')
 
-            # if 'sensor_readings' in app_state:
+            #- if 'sensor_readings' in app_state:
             if 'sensor_readings' in app_state[args['source']]:
                 for r in app_state[args['source']]['sensor_readings']:
 
@@ -62,9 +62,9 @@ def start(app_state, args, b):
                         logDB(r)
 
                     #Log the value remotely.
-                    if args['log_data_via_mqtt'] and ('mqtt' in app_state):
-                        app_state['mqtt']['publish_queue'].put(r)
-                    elif not ('mqtt' in app_state):
+                    if args['log_data_via_mqtt'] and (args['mqtt_resource'] in app_state):
+                        app_state[args['mqtt_resource']]['publish_queue'].put(r)
+                    elif not (args['mqtt_resource'] in app_state):
                         logger.warning('no mqtt client avaiable.')
             else:
                 logger.error('no sensor readings available.')
