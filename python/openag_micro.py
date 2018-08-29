@@ -90,7 +90,7 @@ def extract_sensor_values(result, vals):
     global p
     values = p.findall(result)
 
-    if len(values) == 8:
+    if len(values) == 6:
         # Save each reading with a timestamp.
         # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
         vals[0]['value'] = values[1] # snip the humidity 
