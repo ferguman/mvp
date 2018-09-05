@@ -8,10 +8,11 @@ from subprocess import check_call, CalledProcessError, run, PIPE, STDOUT
 from sys import path, exc_info
 from shutil import copyfile
 from threading import Lock
-from logging import getLogger
-from python.camera_subscribers.make_subscriber import get_camera_subscribers
 
-logger = getLogger('mvp.' + __name__)
+from python.camera_subscribers.make_subscriber import get_camera_subscribers
+from python.logger import get_sub_logger 
+
+logger = get_sub_logger(__name__)
 
 camera_lock = Lock()
 
@@ -90,13 +91,12 @@ def start(app_state, args, b):
    
     camera_subscribers = get_camera_subscribers(args['subscribers'])
 
-    camera_lock = Lock()
+    #- camera_lock = Lock()
     
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
     app_state[args['name']]['snap'] = snap
-    
 
     # Don't proceed until all the other threads are up and ready.
     b.wait()    

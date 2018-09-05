@@ -35,9 +35,9 @@
 from check_python_version import check_python_version
 check_python_version()
 
-from python.mvp_logger import get_logger
+from python.logger import get_top_level_logger
 from python.verify_config_files import verify_config_file
-logger = get_logger()
+logger = get_top_level_logger()
 
 logger.info('############## starting mvp')
 

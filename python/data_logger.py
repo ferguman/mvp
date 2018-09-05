@@ -9,15 +9,16 @@
 #
 
 from time import sleep, time
-from logging import getLogger
-from python.logData import logDB
 
-logger = getLogger('mvp.' + __name__)
+from python.logData import logDB
+from python.logger import get_sub_logger 
+
+logger = get_sub_logger(__name__)
 
 def time_to_sample(interval, state):
 
    if interval <= 0 or interval > 86400:
-      logger.error('The data_logger_sample_interval must be '
+      logger.error('The data logging sample interval must be '
                  + 'set to a value between 1 and 86400. BTW: 86400 seconds is 24 hours.')
       return False
 
@@ -63,7 +64,7 @@ def start(app_state, args, b):
 
                     #Log the value remotely.
                     if args['log_data_via_mqtt'] and (args['mqtt_resource'] in app_state):
-                        app_state[args['mqtt_resource']]['publish_queue'].put(r)
+                        app_state[args['mqtt_resource']]['publish_queue'].put(['sensor_reading', r])
                     elif not (args['mqtt_resource'] in app_state):
                         logger.warning('no mqtt client avaiable.')
             else:

@@ -2,7 +2,8 @@
 # Fan actuator controlled by thermometer
 
 from datetime import datetime
-from logging import getLogger
+#- from logging import getLogger
+from python.logger import get_sub_logger 
 from sys import exc_info
 from time import sleep, time
 
@@ -10,7 +11,8 @@ from config.config import max_air_temperature, fan_controller_temp_sensor
 from python.logData import logData
 from python.thermostat import adjustThermostat
 
-logger = getLogger('mvp.' + __name__)
+#- logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 # TBD: Need to add an initializer that turns the fan off when the system powers up or reads it's state and updates the
 # the thermostat state with it.

@@ -3,16 +3,18 @@ from os import getcwd
 from datetime import tzinfo, datetime
 import requests
 import json
-from logging import getLogger
 
-from config.config import log_data_to_local_couchdb, log_data_to_local_file
+#- from config.config import log_data_to_local_couchdb, log_data_to_local_file
+from config.config import local_couchdb_url
+from python.logger import get_sub_logger 
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
+""" -
 def need_to_log_locally():
     return log_data_to_local_couchdb or log_data_to_local_file
-
-
+"""
+""" -
 # Log data to couchdb and/or file or neither.
 #
 
@@ -26,8 +28,9 @@ def logData(sensor_name, status, attribute, subject, value, units, comment):
 
    if log_data_to_local_couchdb == True:
        logDB(timestamp, sensor_name, status, attribute, value, comment)
+"""
 
-
+# TBD - Need to make add capability to system to log to a file.
 def logFile(timestamp, name, status, attribute, value, comment):
     #TBD - Need to put a file rotation scheme in place for the text file.
     #TBD - I'm not sure this is thread safe.  If the light controller and the logSensor
@@ -42,28 +45,21 @@ def logFile(timestamp, name, status, attribute, value, comment):
     except:
         logger.error('Error writing to data file: {}'.format(exc_info()[0]))
 
+"""
+For reference here is the format of r (i.e a sensor reading):
 
+    {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+     'subject':'air', 'subject_location_id':args['air_location_id'], 
+     'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None}
+"""
 def logDB(r, comment=''):
 
-    #- s = name + ", " + status + ", " + attribute + ", " + value + "," + comment
-    #- logger.debug('couchd db write: {}'.format(s))
-
-    """
-    app_state['sensor_readings'] = [
-            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-             'subject':'air', 'subject_location_id':args['air_location_id'], 
-             'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
-            {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-             'subject':'air', 'subject_location_id':args['air_location_id'], 
-             'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None}
-            ]
-    """
     log_record = {'timestamp' : r['ts'],
-            'name' : '{} {}'.format(r['subject'],r['attribute']),
-            'status' : 'Success',
-            'attribute' : r['attribute'],
-            'value' : r['value'],
-            'comment' : comment}
+                  'name' :      '{} {}'.format(r['subject'],r['attribute']),
+                  'status' :    'Success',
+                  'attribute' : r['attribute'],
+                  'value' :     r['value'],
+                  'comment' :   comment}
 
     logger.info('couchd db write: {}, {}, {}, {}, {}'.format(log_record['name'], 
                                                              log_record['status'], log_record['attribute'], 
@@ -80,5 +76,4 @@ def logDB(r, comment=''):
     exception will be raised.
     """
 
-    #TBD: Need to parameterize the couchdb database name.  Replication may result in each mvp instance needing a different name.
-    r = requests.post('http://localhost:5984/mvp_sensor_data_fc1', data = json_data, headers=headers)
+    result = requests.post(local_couchdb_url, data = json_data, headers=headers)

@@ -1,13 +1,14 @@
 import threading
 import smbus2, time
-from logging import getLogger
 import sys
+
+from python.logger import get_sub_logger 
 
 address = 0x40
 rh_no_hold = 0xf5
 previous_temp = 0xe0
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 class si7021(object):
 

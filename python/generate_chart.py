@@ -3,13 +3,14 @@ import pygal
 from sys import exc_info
 import requests
 import json
-from logging import getLogger
+
+from python.logger import get_sub_logger 
 
 #Use a view in CouchDB to get the data
 #use the first key for attribute type
 #order descending so when limit the results will get the latest at the top
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 def generate_chart(couchdb_url, chart_info):
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from logging import getLogger
+#- from logging import getLogger
 from queue import Queue, Empty
 from subprocess import * 
 from sys import path, exc_info
@@ -9,10 +9,13 @@ import paho.mqtt.client as mqtt
 
 from config.config import enable_mqtt, encrypted_mqtt_password, mqtt_client_id, mqtt_username,\
                           mqtt_url, mqtt_port, plain_text_mqtt_password
-from python.repl import get_passphrase
-from python.send_mqtt_data import send_sensor_data_via_mqtt_v2
 
-logger = getLogger('mvp' + '.' + __name__)
+from python.logger import get_sub_logger 
+from python.repl import get_passphrase
+from python.send_mqtt_data import publish_sensor_reading, publish_cmd_response #- send_sensor_data_via_mqtt_v2
+
+#- logger = getLogger('mvp' + '.' + __name__)
+logger = get_sub_logger(__name__)
 
 # TBD: Need to refactor to use something like pyopenssl.
 def decrypt_mqtt_password(passphrase):
@@ -70,29 +73,45 @@ def on_connect(client, userdata, flags, rc):
         logger.error('mqtt broker connection failed: {}:{}'.format(rc, connection_result(rc)))
 
 
-def on_message(client, userdata, message):
-   logger.error('MQTT message received. This version of the mvp code does not support incoming MQTT messages.')
+def make_on_message(app_state, publish_queue):
 
+    # message -> an instance of MWTTMessage. This is a class with members topic, payload, qos,
+    #            and retain.
+    def on_message(client, userdata, message):
+        
+        logger.info('MQTT command received: userdata: {}, payload: {}'.format(userdata, message.payload.decode('utf-8')))
+
+        # execute the command
+        #- logger.info('Command result: {}'.format(app_state['sys']['cmd'](message.payload.decode('utf-8'))))
+        publish_queue.put(['cmd_response', app_state['sys']['cmd'](message.payload.decode('utf-8'))])
+
+    return on_message
+   
 def on_publish(mqttc, obj, mid):
    logger.debug('MQTT message published, mid={}'.format(mid))
 
 def on_disconnect(mqtt, userdata, rc):
    logger.warning('MQTT Disconnected.')
 
+def on_subscribe(mqtt, userdata, mid, granted_qos):
+
+    logger.info("subscribed, data: {}, mid: {}".format(userdata, mid))
 
 # TBD - Need to figure out how to time it out
 # after a configurable period of time.
 #
-def start_paho_mqtt_client(mqtt_password):
+def start_paho_mqtt_client(mqtt_password, app_state, publish_queue):
 
     try:
         mqtt_client = paho.mqtt.client.Client(mqtt_client_id)
 
         # Configure the client callback functions
         mqtt_client.on_connect = on_connect
-        mqtt_client.on_message = on_message
+        mqtt_client.on_message = make_on_message(app_state, publish_queue)
         mqtt_client.on_publish = on_publish
         mqtt_client.on_disconnect = on_disconnect
+        mqtt_client.on_subscribe = on_subscribe
+
         #- mqtt_client.on_log = on_log
 
         mqtt_client.enable_logger(logger)
@@ -109,7 +128,8 @@ def start_paho_mqtt_client(mqtt_password):
         return [True, mqtt_client]
     except:
       logger.error('Unable to create an MQTT client: {} {}, exiting...'.format(exc_info()[0], exc_info()[1]))
-      exit()
+      return [False, None]
+      #- exit()
 
 def make_mqtt_help(res_name):
 
@@ -127,10 +147,12 @@ def start(app_state, args, b):
 
     logger.info('starting mqtt client')
     
-    publish_queue = Queue()
-    mqtt_client = None
-
     app_state[args['name']] = {}
+
+    publish_queue = Queue()
+    app_state[args['name']]['publish_queue'] = publish_queue
+
+    mqtt_client = None
 
     if args['enable']:
 
@@ -138,18 +160,38 @@ def start(app_state, args, b):
 
         if pw is not None:
             # Note that the paho mqtt client has the ability to spawn it's own thread.
-            result = start_paho_mqtt_client(pw)
+            # TBD - app_state is "too much" to give here. We need to figure out how to pare it down to
+            # app_state['sys']['cmd']
+            mqtt_client = start_paho_mqtt_client(pw, app_state, publish_queue)[1]
+            """ -
+            result = start_paho_mqtt_client(pw, app_state, publish_queue)
             if result[0] == True:
-                app_state[args['name']]['publish_queue'] = publish_queue
+                #- app_state[args['name']]['publish_queue'] = publish_queue
                 mqtt_client = result[1]
             else:
                 logger.error('Unable to start an MQTT client. Exiting....')
-                exit()
+                mqtt_client =  None
+            """
 
         app_state[args['name']]['help'] = make_mqtt_help(args['name'])
 
         # Let the system know that you are good to go. 
         b.wait()
+
+        if mqtt_client: 
+            # Subscribe to the broker so commands can be received.
+            # QOS 2 = Exactly Once
+            try:
+               result = mqtt_client.subscribe("foo/cmd", 2)
+               if result[0] == 0:
+                   logger.info("MQTT subscription to topic foo/cmd requested")
+                   # TBD: need to research what the following command does.
+                   # mqtt_client.topic_ack.append([topic_list, result[1],0])
+               else:
+                   logger.error("MQTT subcription (topic foo/cmd) request failed")
+            except Exception as e:
+                logger.error('Exception occurred while attempting to subscribe to MQTT: {}{}'.format(\
+                             exc_info()[0], exc_info()[1]))
 
         while not app_state['stop']:
 
@@ -162,14 +204,38 @@ def start(app_state, args, b):
                 case).
             """
             try:
-                r = publish_queue.get(False)
-                logger.info('publishing reading via mqtt')
-                send_sensor_data_via_mqtt_v2(r, mqtt_client, args['organization_id'])
-                
-                # Bypass the sleep command in order to keep draining the queue in real time.
-                continue
+                item = publish_queue.get(False)
+
+                try:
+
+                    if not mqtt_client: 
+                        logger.error('there is no mqtt client available for published request: {}'.format(item[0]))
+                        continue
+
+                    if item[0] == 'sensor_reading':
+                        logger.info('publishing reading via mqtt')
+                        #- send_sensor_data_via_mqtt_v2(item[1], mqtt_client, args['organization_id'])
+                        publish_sensor_reading(mqtt_client, args['organization_id'], item[1])
+
+                        # Bypass the sleep command in order to keep draining the queue in real time.
+                        continue
+
+                    if item[0] == 'cmd_response': 
+                        logger.info('publishing commmand response via mqtt')
+                        publish_cmd_response(mqtt_client, args['organization_id'], item[1]) 
+
+                        # Bypass the sleep command in order to keep draining the queue in real time.
+                        continue
+                   
+                    else:
+                        logger.error('unknown mqtt publish item encountered: {}'.format(item[0]))
+
+                except Exception as e:
+                    logger.error('exception occurred in main loop of MQTT thread: {}{}'.format(\
+                                 exc_info()[0], exc_info()[1]))
+           
             except Empty:
-                # this is ok. It just means the publish queue is empty.
+                # This is ok. It just means the publish queue is empty.
                 pass
             
             sleep(1)

@@ -1,7 +1,7 @@
 from sys import path
 from time import time, sleep
 import datetime
-from logging import getLogger
+from python.logger import get_sub_logger 
 
 from config.config import data_logger_sample_interval, logging_devices, log_data_to_local_file,\
                    log_data_to_local_couchdb, log_data_via_mqtt
@@ -10,8 +10,7 @@ from python.send_mqtt_data import send_sensor_data_via_mqtt
 
 # Check sensors and log to file
 
-logger = getLogger('mvp.' + __name__)
-
+logger = get_sub_logger(__name__)
 
 def time_to_sample(state):
 

@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 from datetime import datetime
-from logging import getLogger
+from python.logger import get_sub_logger 
 from sys import exc_info
 
 from python.logData import logData
@@ -11,7 +11,7 @@ from python.logData import logData
 #Fan is assumed to be wired to Pin 33 (GPIO 13)
 #Pin 30 may control a relay or be a transistor switch, assumes HIGH means ON
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 def fan_state(on_flag):
 

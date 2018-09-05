@@ -4,18 +4,20 @@
 #    grow_light - on/off light controller named grow_light.
 #    sensor_readings - A list of the fc sensor readings updated every 1 second.
 #
-from logging import getLogger 
 from threading import Lock
 from time import sleep, time
 import re
 import serial
 
-logger = getLogger('mvp.' + __name__)
+from python.logger import get_sub_logger 
+
+logger = get_sub_logger(__name__)
 
 serial_interface_lock = Lock()
 
-# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat
-cur_command = [0,0,0,0]
+# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
+#                    vent fan, circulation fan, chamber lights, motherboard lights.
+cur_command = [0,0,0,0,0,0,0,0]
 
 # Create a binary string of the form: b'0,0,0,0\n'
 def make_fc_cmd():
@@ -90,7 +92,9 @@ def extract_sensor_values(result, vals):
     global p
     values = p.findall(result)
 
-    if len(values) == 6:
+    # TBD keep the next comment up to date.
+    # 9 = the current 8 implemented sensors values ( of the fcv1 plus the status code.
+    if len(values) == 9:
         # Save each reading with a timestamp.
         # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
         vals[0]['value'] = values[1] # snip the humidity 
@@ -108,11 +112,14 @@ def grow_light_controller(cmd):
     if cmd == 'on':
         cur_command[1] = 1
         logger.info('light on command received')
+        return 'OK'
     elif cmd == 'off':
         cur_command[1] = 0
         logger.info('light off command received')
+        return 'OK'
     else:
         logger.error('unknown command received: {}'.format(cmd))
+        return "unknown light state specified. Specify 'on' or 'off'"
 
 def make_help(args):
 
@@ -126,26 +133,25 @@ def make_help(args):
         s = s + "                               0: air humidity\n"
         s = s + "                               1: air temperature\n"
         s = s + "{0}.mc_cmd(mc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
+        s = s + "                               mc_cmd_str is specified as a string -> {0}.mc_cmd(\"(help)\") or {0}.mc_cmd('(help)')\n".format(prefix)
+        s = s + "                               Embed quotes (\") by using the \ character -> {0}.mc_cmd(\"(c 'co2 'ser ".format(prefix) + r'\"Z\")")' + '\n'
         
         return s
 
     return help
 
-# TBD- Need to create some sort of locking mechanism around the ser object so that user
-#      intiated commands don't conflict with commands sent in the while loop.
-#      Also need to turn the user entered value in a byte string.
 def make_mc_cmd(ser):
 
     def mc_cmd(cmd_str):
+        
+        result = None
 
         # wait until the serial interface is free.
         serial_interface_lock.acquire()
-        result = None
+
         try:
             cmd_str_bytes = bytes(cmd_str, "ascii")
-            #- print(' '.join(["{0:b}".format(x) for x in cmd_str_bytes]))
             ser.write(cmd_str_bytes + b'\n')
-            #- ser.write(cmd_str + b'\n')
             result = ser.read_until(b'OK\r').rstrip().decode('utf-8')
             ser.reset_input_buffer()
         finally:
@@ -153,6 +159,14 @@ def make_mc_cmd(ser):
             return result
 
     return mc_cmd
+
+def log_result(c_old, c, result):
+
+    if c_old != c:
+        logger.info('Arduino command change old: {}'.format(c_old))
+        logger.info('                       new: {}'.format(c))
+        logger.info('Result of new command: {}'.format(result))
+
 
 def start(app_state, args, b):
 
@@ -188,16 +202,26 @@ def start(app_state, args, b):
     # Let the system know that you are good to go.
     b.wait()
 
+    c = None
+    c_old = None
+
     while not app_state['stop']:
 
         serial_interface_lock.acquire()
 
         try:
             # Send the actuator command.
+            c_old = c
             c = make_fc_cmd()
-            ser.write(make_fc_cmd())
+            
+            #- logger.debug('arduino command: {}'.format(c))
+            ser.write(c)
             result = ser.read_until(b'\n').rstrip().decode('utf-8')
             ser.reset_input_buffer()
+
+            log_result(c_old, c, result)
+
+            #- logger.debug('arduino response: {}'.format(result))
             
             # Save the sensor readings
             extract_sensor_values(result, vals)

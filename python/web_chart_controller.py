@@ -1,13 +1,13 @@
 from datetime import datetime
-from logging import getLogger
 from subprocess import check_call, CalledProcessError
 from sys import path
 from time import sleep, time
 
 from config.config import charting_interval, couchdb_location_url, chart_list
 from python.generate_chart import generate_chart
+from python.logger import get_sub_logger 
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 def start_web_chart_controller(app_state):
 

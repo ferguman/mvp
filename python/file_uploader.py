@@ -2,17 +2,16 @@ from base64 import standard_b64encode
 from datetime import datetime, timezone
 from hashlib import sha256
 from jose import jws 
-from logging import getLogger
 from requests import post
 from time import time
 from uuid import uuid4
 
-#from config.config import device_id, camera_device_id, hmac_secret_key, fop_jose_id
 from config.config import device_id, hmac_secret_key, fop_jose_id
+from python.logger import get_sub_logger 
 
 # Note: This module uses JWT security (via jose).  Paseto is another system for implemeting token based security.
 
-logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 def extract_timestamp(path_name) -> 'timestamp':
 

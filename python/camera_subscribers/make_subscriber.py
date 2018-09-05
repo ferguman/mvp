@@ -1,4 +1,4 @@
-from config.config import camera_subscribers
+#- from config.config import camera_subscribers
 
 def make_subscriber(dict):
 

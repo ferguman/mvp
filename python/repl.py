@@ -3,13 +3,17 @@
 #
 
 from getpass import getpass
-from logging import getLogger
-import re
 from sys import exc_info
+from threading import Lock
+import re
 
-logger = getLogger('mvp.' + __name__)
+from python.logger import get_sub_logger 
+
+logger = get_sub_logger(__name__)
 
 from config.config import enable_mqtt, device_name, system
+
+cmd_lock = Lock()
 
 def get_passphrase():
 
@@ -22,9 +26,14 @@ def get_passphrase():
 def help():
     
     return """\
-    sys.help() - displays this page.
-    sys.exit() - stop the mvp program.
-    sys.dir() - show all available resources\n
+    sys.help() -   displays this page.
+    sys.exit() -   stop the mvp program.
+    sys.dir() -    show all available resources
+    sys.cmd(cmd) - run a command. Note: that if a command calls this command then the system will lock
+                   forever waiting for the first call to finish.  This command is not reentrant. Also
+                   if you call this command from the command prompt then the sytem will lock forever. This
+                   command is meant for resources such as an MQTT client to use.\n
+
     In order to access the help for each resource enter: resource_name.help() where
     resource_name is the name of the resource. Enter sys.dir() to see a list of 
     available resources on your system. Example: camera.help().
@@ -65,34 +74,48 @@ def trans_cmds(input_str):
     global cmd_re
     return cmd_re.sub(trans_cmd, input_str)
 
+def make_run_cmd(repl_globals, app_state):
+
+    def run_cmd(cmd):
+        
+        # Wait for a lock.
+        cmd_lock.acquire()
+        
+        try:
+            # debug print -> print(trans_cmds(cmd))
+            return eval(trans_cmds(cmd), repl_globals, app_state)
+        except:
+            return 'command error. enter sys.help() for help'
+            logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
+        finally:
+            cmd_lock.release()
+
+    return run_cmd
+
 def repl(app_state):
 
     print('Enter: sys.help() to see a list of available commands.')
+
+    repl_globals = {'__builtins__':None, 'dir':dir}
+
+    global run_cmd
+    run_cmd  = make_run_cmd(repl_globals, app_state) 
 
     app_state['sys'] = {}
     app_state['sys']['help'] = help
     app_state['sys']['exit'] = make_exit_mvp(app_state)
     app_state['sys']['dir'] = sys_dir 
-    
-    repl_globals = {'__builtins__':None, 'dir':dir}
+    app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
+
+    # TBD - considering adding a command: sys.inject(r[resource_name], 'start':'stop')
+    #       when in inject mode the system would pass the user input directory to resource 
+    #       as in -> ['app_state']['[resource_name]')['cmd'](user input))
+    #       This would make it easier to do things like spend time sending and receiving input
+    #       from the Arduino serial monitor.
 
     while not app_state['stop']:
        
         # TBD: Need to sanitize the name to guard against shell attack.
         cmd = input(device_name + ': ')
-        
-        try:
-            # Need to sandbox the python interpretter as much as possible. Also maybe 
-            # strip out the lispy stuff and go all python.:w
-         
-            print(trans_cmds(cmd))
-            result = eval(trans_cmds(cmd), repl_globals, app_state)
-            if result != None:
-                print(result)
 
-        except:
-            print('command error. enter sys.help() for help')
-            logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
-
-
-
+        print(app_state['sys']['cmd'](cmd))

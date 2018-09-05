@@ -3,10 +3,12 @@
 # it requires an on/off light controller -> eg. controller('on') and controller('off')
 #
 from datetime import datetime
-from logging import getLogger
+#- from logging import getLogger
 from time import sleep
 
-logger = getLogger('mvp.' + __name__)
+from python.logger import get_sub_logger 
+#- logger = getLogger('mvp.' + __name__)
+logger = get_sub_logger(__name__)
 
 def run_controller(light_state, lc, program):
 

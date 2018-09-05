@@ -1,6 +1,7 @@
 from logging import getLogger, Formatter, INFO, DEBUG 
 from logging.handlers import RotatingFileHandler
 from os import getcwd
+from config.config import device_name
 
 # TBD:  Move the logging configuration to a dictionary stored in a configuration file.
 # On linux use tail -F (translates as tail --follow=name --retry) to follow the 
@@ -10,11 +11,11 @@ from os import getcwd
 # rotation.
 #
 
-def get_logger():
+def get_top_level_logger():
 
-   logger = getLogger('mvp')
+   logger = getLogger(device_name)
    logger.setLevel(INFO)
-   handler = RotatingFileHandler(getcwd() + '/logs/mvp.log', maxBytes=10*1000*1000,\
+   handler = RotatingFileHandler(getcwd() + '/logs/fopd.log', maxBytes=10*1000*1000,\
                                  backupCount=5)
    formatter = Formatter(fmt='%(asctime)s %(levelname)s %(name)s:%(message)s', 
                              datefmt='%Y-%m-%d %I:%M:%S %p %Z')
@@ -22,3 +23,6 @@ def get_logger():
    logger.addHandler(handler)
 
    return logger
+
+def get_sub_logger(name):
+    return getLogger(device_name + '.' + name)

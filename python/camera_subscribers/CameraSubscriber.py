@@ -1,11 +1,12 @@
-from logging import getLogger
 import re
+
+from python.logger import get_sub_logger 
 
 # image subscriber
 #
 class CameraSubscriber():
 
-    logger = getLogger('mvp.' + __name__)
+    logger = get_sub_logger(__name__)
 
     def __init__(self, **kwargs):
 

@@ -1,9 +1,10 @@
 from shutil import copyfile
 from os import path, getcwd
-from logging import getLogger
 from sys import exc_info
 
-logger = getLogger('mvp.' + __name__)
+from python.logger import get_sub_logger 
+
+logger = get_sub_logger(__name__)
 
 def verify_config_file():
 
