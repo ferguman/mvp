@@ -165,6 +165,7 @@ def make_mc_cmd(ser):
 
 def cur_mc_response_as_str():
 
+    # Note the use of the global cur_mc_response
     if cur_mc_response == None:
         return 'None'
     else:
@@ -176,7 +177,7 @@ def cur_mc_response_as_str():
 #
 def show_state():
 
-    # Note use of global cur_response
+    # Note use of global cur_mc_cmd_str
     return 'current micro-controller string: {}\n'.format(cur_mc_cmd_str) +\
            'current micro-controller response: {}\n'.format(cur_mc_response_as_str())
 
