@@ -43,6 +43,12 @@ def create_sensor_reading_dict(args):
                {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
                 'subject':'water', 'subject_location_id':args['water_location_id'], 
                 'attribute':'ec', 'value':None, 'units':'mS/cm', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+                'subject':'air', 'subject_location_id':args['air_location_id'], 
+                'attribute':'shell_off', 'value':None, 'units':'None', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
+                'subject':'air', 'subject_location_id':args['air_location_id'], 
+                'attribute':'window_off', 'value':None, 'units':'None', 'ts':None},
    ]
 
 # Provide a lock so that multiple threads can share the serial interface to the Arduino
@@ -56,7 +62,7 @@ old_mc_cmd_str = None
 cur_mc_response = None
 old_mc_response = None
 
-# Create a binary string of the form: b'0,0,0,0\n'
+# Create a binary string of the form: b'0,1, .... \n'
 def make_fc_cmd():
 
     global cur_command
@@ -93,12 +99,12 @@ def extract_sensor_values(mc_response, vals):
             values = re.compile(r'(\d+\.\d+)|\d+').findall(msg)
 
             # TBD keep the next comment up to date.
-            # 9 = the current 8 implemented sensors values of the fcv1 plus the status code.
-            if len(values) == 9:
+            # 11 = the current 10 implemented sensors values of the fcv1 plus the status code.
+            if len(values) == 11:
                 readings_found = True
                 # Save each reading with a timestamp.
                 # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
-                for i in range (1, 9):
+                for i in range (1, 11):
                    vals[i-1]['value'] = values[i] 
 
     if not readings_found:
