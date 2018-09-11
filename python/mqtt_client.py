@@ -17,6 +17,7 @@ from python.send_mqtt_data import publish_sensor_reading, publish_cmd_response #
 #- logger = getLogger('mvp' + '.' + __name__)
 logger = get_sub_logger(__name__)
 
+
 # TBD: Need to refactor to use something like pyopenssl.
 def decrypt_mqtt_password(passphrase):
 
@@ -145,6 +146,7 @@ def make_mqtt_help(res_name):
 #
 def start(app_state, args, b):
 
+    logger.setLevel(args['log_level'])
     logger.info('starting mqtt client')
     
     app_state[args['name']] = {}
