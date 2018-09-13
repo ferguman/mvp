@@ -37,7 +37,6 @@ def load_recipe_file(rel_path):
 
 def load_state_file(rel_path):
 
-
     state_file_path = getcwd() + rel_path
     logger.debug('opening climate state file: {}'.format(state_file_path))
 
@@ -76,8 +75,12 @@ def make_help(prefix):
 
     def help():
 
-        s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
-        s = s + '{}.state()                   - Show climate controller state.\n'.format(prefix)
+        s =     '{}.help()                         - Displays this help page.\n'.format(prefix)
+        s = s + "{}.cmd('start'|'stop', options)   - Execute the given command.\n".format(prefix)
+        s = s + "                                    {}.cmd('start', day_index=n) - start recipe on the designated day (0 based). If no day_index is supplied then start on day 0.\n".format(prefix)
+        s = s + "                                    e.g. {}.cmd('start', day_index=2) to start recipe on 3rd day.\n".format(prefix)
+        s = s + "                                    {}.cmd('stop') - stop the current recipe.\n".format(prefix)
+        s = s + '{}.state()                        - Show climate controller state.\n'.format(prefix)
         
         return s
 
@@ -89,19 +92,42 @@ def show_state():
         s =     'Mode:  {}\n'.format(climate_state['run_mode'])  
 
         if climate_state['recipe_start_time'] != None:
-            st = datetime.datetime.fromtimestamp(climate_state['recipe_start_time']).isoformat()
+            s = s + 'Recipe start time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['recipe_start_time']))
         else:
-            st = None
-        s = s + 'Recipe start time: {}\n'.format(st)
+            s = s + 'Recipe start time: None\n'
 
+        s = s + 'Current day index: {}\n'.format(climate_state['cur_day'])
         s = s + 'Current minute: {}\n'.format(climate_state['cur_min'])
-        s = s + 'Phase: {}\n'.format(climate_state['current_phase'])   
+        s = s + 'Current phase index: {}\n'.format(climate_state['cur_phase_index'])   
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
         return s
 
     except:
         logger.error('show_state command {}{}'.format(exc_info()[0], exc_info()[1]))
+        return "Error - can't show stat"
+
+def cmd(*args, **kwargs):
+   
+    if len(args) == 1:
+        if args[0] == 'start':
+
+            if 'day_index' in kwargs:
+                climate_state['cur_day'] = kwargs['day_index']
+            else:
+                climate_state['cur_day'] = 0
+
+            climate_state['run_mode'] = 'on'
+            climate_state['recipe_start_time'] = (datetime.datetime.now() - datetime.timedelta(days=climate_state['cur_day'])).timestamp()
+            return 'OK'
+        elif args[0] == 'stop':
+            climate_state['run_mode'] = 'off'
+            climate_state['recipe_start_time'] = None
+            return 'OK'
+        else:
+            return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
+    else:
+        return "you must supply a cmd (e.g. 'start')"
 
 
 def init_state(args):
@@ -109,7 +135,7 @@ def init_state(args):
     # Initialize the climate controller state - this stuff will get replaced
     # if there is a state file to load
     climate_state['run_mode'] = 'off'
-    climate_state['current_phase'] = None
+    climate_state['cur_phase_index'] = None
     climate_state['recipe_start_time'] = None
     # make sure the state has a recipe in case there is no state file.
     load_recipe_file(args['default_recipe_file'])
@@ -118,13 +144,30 @@ def init_state(args):
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
     climate_state['last_state_file_update_time'] = time.time()
-    
-    climate_state['cur_min'] = datetime.datetime.now().minute
+  
+    now = datetime.datetime.now()
+    climate_state['cur_min'] = now.minute
+    if climate_state['recipe_start_time'] != None:
+        climate_state['cur_day'] = (now - datetime.datetime.fromtimestamp(climate_state['recipe_start_time'])).days
+    else:
+        climate_state['cur_day'] = None
 
     # set_todays_cycle()
 
-def check_lights():
-    pass
+def check_lights(log_period_mins):
+
+    try:
+        light_times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step']['light_intensity']
+
+        if len(light_times) > 0:
+            if (climate_state['cur_min'] % log_period_mins) == 0:
+               logger.warning('Lights are on or off. TBD Need to fix this message.')
+        else:
+            if (climate_state['cur_min'] % log_period_mins) == 0:
+               logger.warning('There are no grow light instructions in this recipe.  Why?')
+    except:
+        logger.error('No grow light instructions found: {}, {}'.format(exc_info()[0], exc_info()[1]))
+
 
     # if we are in a cycle
         # if the cycle has light instrucionts
@@ -133,6 +176,35 @@ def check_lights():
                # app_state['sys']['cmd'](args['light_on_cmd'])
             # if the current light instruciotn is off then
                # app_state['sys']['cmd'](args['light_off_cmd'])
+    """
+           cur_min = datetime.datetime.now().minute
+           if cur_min > climate_state['cur_min']:
+               climate_state['cur_min'] = cur_min
+    """
+
+def get_phase_index(cur_day_index, phases):
+
+    try:
+
+        rcp_day_index = 0
+
+        for i in range(0, len(phases)):
+            
+            rcp_phase_cycles = phases[i]['cycles']
+
+            if cur_day_index >= rcp_day_index and cur_day_index < rcp_day_index + rcp_phase_cycles: 
+
+                return i
+
+            else:
+                rcp_day_index = rcp_day_index + cur_cycles
+
+        logger.error('the current recipe does not apply to today. It may be over.')
+        return None
+
+    except:
+        logger.error('cannot update phase index: {}, {}'.format(exc_info()[0], exc_info()[1]))
+        return None
        
 
 def start(app_state, args, barrier):
@@ -144,6 +216,7 @@ def start(app_state, args, barrier):
     app_state[args['name']] = {}
     app_state[args['name']]['help'] = make_help(args['name']) 
     app_state[args['name']]['state'] = show_state
+    app_state[args['name']]['cmd'] = cmd
 
     init_state(args)
 
@@ -152,16 +225,12 @@ def start(app_state, args, barrier):
 
     while not app_state['stop']:
 
-       #update_phase_and_cycle()
-
        if climate_state['run_mode'] == 'on': 
 
-           cur_min = datetime.datetime.now().minute
-           if cur_min > climate_state['cur_min']:
-               climate_state['cur_min'] = cur_min
+           climate_state['cur_phase_index'] = get_phase_index(climate_state['cur_day'], climate_state['recipe']['phases'])
+           log_
 
-               # if we have not updated this minute
-               check_lights()
+           check_lights(args['log_period_mins'])
 
            #check_air_flush()
            #check_air_temperature()
