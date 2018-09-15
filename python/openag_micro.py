@@ -119,6 +119,8 @@ def make_help(args):
         prefix = args['name']
 
         s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
+        s = s + "{}.cmd('on':'off', target)   - Turn an actuator on or off. Targets:\n".format(prefix)
+        s = s + '                               grow_light, vent_fan\n'
         s = s + "{}.grow_light('on'|'off')    - Turns the grow light on or off.\n".format(prefix)
         s = s + "{0}.mc_cmd(mc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
         s = s + "                               mc_cmd_str is specified as a string -> {0}.mc_cmd(\"(help)\") or {0}.mc_cmd('(help)')\n".format(prefix)
@@ -137,16 +139,45 @@ def grow_light_controller(cmd):
     global cur_command
 
     if cmd == 'on':
+        if cur_command[1] == 0:
+            logger.info('Recevied light on command. Will turn light on.')
         cur_command[1] = 1
-        logger.info('light on command received')
         return 'OK'
     elif cmd == 'off':
+        if cur_command[1] == 1:
+            logger.info('Recevied light off command. Will turn light off.')
         cur_command[1] = 0
-        logger.info('light off command received')
         return 'OK'
     else:
         logger.error('unknown command received: {}'.format(cmd))
         return "unknown light state specified. Specify 'on' or 'off'"
+
+# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
+#                    vent fan, circulation fan, chamber lights, motherboard lights.
+target_indexes = {'grow_light':1, 'vent_fan': 4}
+
+def cmd(cmd, target): 
+
+    if target in target_indexes:
+
+        target_index = target_indexes[target]
+        global cur_command
+
+        if cmd == 'on':
+            if cur_command[target_index] == 0:
+                logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
+            cur_command[target_index] = 1
+            return 'OK'
+        elif cmd == 'off':
+            if cur_command[target_index] == 1:
+                logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
+            cur_command[target_index] = 0
+            return 'OK'
+        else:
+            logger.error('unknown command received: {}'.format(cmd))
+            return "unknown cmd. Specify 'on' or 'off'"
+    else:
+        return 'unknown target.'
 
 
 def make_mc_cmd(ser):
@@ -300,6 +331,7 @@ def start(app_state, args, b):
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
     app_state[args['name']]['grow_light'] = grow_light_controller
+    app_state[args['name']]['cmd'] = cmd
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    

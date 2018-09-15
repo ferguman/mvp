@@ -1,3 +1,7 @@
+# TBD: Need to write the state file out whenever a change is made that makes this necessary (such as someone turning
+#      a recipe on or off.  Add this functionality. Currenlty the state file is written out every state_file_write_interval
+#      seconds and when the program gracefully exits.
+
 from os import path, getcwd
 from sys import exc_info
 from time import sleep, time
@@ -53,9 +57,9 @@ def load_state_file(rel_path):
     else:
         logger.debug('no state file found. The climate controller will be set to off.')
 
-def write_state_file(rel_path, update_interval):
+def write_state_file(rel_path, update_interval, force):
 
-    if time.time() >= climate_state['last_state_file_update_time'] + update_interval:
+    if force or (time.time() >= climate_state['last_state_file_update_time'] + update_interval):
 
         # Go ahead and log the update time even though the file write is not done. This way
         # you want bang on the file system over and over in the presence of errors.
@@ -86,10 +90,22 @@ def make_help(prefix):
 
     return help
 
+def show_recipe():
+
+    if climate_state['recipe'] != None:
+        return climate_state['recipe']
+    else:
+        return None 
+
 def show_state():
 
     try:
         s =     'Mode:  {}\n'.format(climate_state['run_mode'])  
+
+        if climate_state['recipe'] != None:
+            s = s + 'Recipe id: {}\n'.format(climate_state['recipe']['id'])
+        else:
+            s = s + 'Recipe id: None\n'
 
         if climate_state['recipe_start_time'] != None:
             s = s + 'Recipe start time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['recipe_start_time']))
@@ -97,8 +113,30 @@ def show_state():
             s = s + 'Recipe start time: None\n'
 
         s = s + 'Current day index: {}\n'.format(climate_state['cur_day'])
+        s = s + 'Current hour: {}\n'.format(climate_state['cur_hour'])
         s = s + 'Current minute: {}\n'.format(climate_state['cur_min'])
+        if climate_state['recipe'] != None and climate_state['cur_phase_index'] != None:
+            s = s + 'Current phase: {}\n'.format(climate_state['recipe']['phases'][climate_state['cur_phase_index']]['name'])   
+
         s = s + 'Current phase index: {}\n'.format(climate_state['cur_phase_index'])   
+
+        s = s + 'Grow light on: {}\n'.format(climate_state['grow_light_on'])
+        if climate_state['grow_light_last_on_time'] != None:
+            s = s + 'Last grow light on time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['grow_light_last_on_time']))
+        else:
+            s = s + 'Last grow light on time: None\n'
+
+        if climate_state['grow_light_last_off_time'] != None:
+            s = s + 'Last grow light off time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['grow_light_last_off_time']))
+        else:
+            s = s + 'Last grow light off time: None\n'
+
+        s = s + 'Vent fan on: {}\n'.format(climate_state['vent_fan_on'])
+        if climate_state['vent_last_on_time'] != None:
+            s = s + 'Last vent fan on time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['vent_last_on_time']))
+        else:
+            s = s + 'Last vent fan on time: None\n'
+
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
         return s
@@ -144,43 +182,211 @@ def init_state(args):
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
     climate_state['last_state_file_update_time'] = time.time()
-  
+
+
     now = datetime.datetime.now()
     climate_state['cur_min'] = now.minute
+    climate_state['cur_hour'] = now.hour
     if climate_state['recipe_start_time'] != None:
         climate_state['cur_day'] = (now - datetime.datetime.fromtimestamp(climate_state['recipe_start_time'])).days
     else:
         climate_state['cur_day'] = None
+        
+    climate_state['grow_light_on'] = False
+    climate_state['grow_light_last_on_time'] = None
+    climate_state['grow_light_last_off_time'] = None
 
-    # set_todays_cycle()
+    climate_state['vent_fan_on'] = False
+    climate_state['vent_last_on_time'] = None
 
-def check_lights(log_period_mins):
+    # climate_state['cur_time'] = 0 
+    climate_state['last_log_time'] = 0
+    climate_state['log_cycle'] = False
+
+# step_name -> e.g. light_intensity, air_fush
+#
+def get_current_recipe_step_value(step_name):
+
+    value = None
 
     try:
-        light_times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step']['light_intensity']
+        times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step'][step_name]
+        if len(times) > 0:
+            
+            for t in times:
 
-        if len(light_times) > 0:
-            if (climate_state['cur_min'] % log_period_mins) == 0:
-               logger.warning('Lights are on or off. TBD Need to fix this message.')
+                past_start = False
+                lt_end = False
+               
+                # accept times as either integers (i.e the hour) or strings (e.g. hh:mm)
+                if isinstance(t['start_time'], int):
+                    start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
+                else:
+                    start = t['start_time'].split(':')
+
+                if start[0] <= climate_state['cur_hour']: 
+                    if len(start) > 1:
+                        if start[1] <= climate_state['cur_min']:
+                            past_start = True
+                        else:
+                            past_start = False
+                    else:
+                        past_start = True 
+
+                if isinstance(t['end_time'], int):
+                    end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
+                else:
+                    end = t['end_time'].split(':')
+                
+                if len(end) == 1:
+                    if end[0] > climate_state['cur_hour']: 
+                        lt_end = True
+                    else:
+                        lt_end = False
+                else:
+                    if (end[0] > climate_state['cur_hour']) or\
+                       (end[0] == climate_state['cur_hour'] and end[1] > climate_state['cur_min']):
+                            lt_end = True
+                    else:
+                        lt_end = False 
+
+                if past_start and lt_end:
+                    value = t['value']
+
+                # logger.info('start: {}, end: {}, past_start: {}, lt_end: {}'.format(start, end, past_start, lt_end))
+
         else:
-            if (climate_state['cur_min'] % log_period_mins) == 0:
-               logger.warning('There are no grow light instructions in this recipe.  Why?')
+            if climate_state['log_cycle']:
+                logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
+
     except:
-        logger.error('No grow light instructions found: {}, {}'.format(exc_info()[0], exc_info()[1]))
+        logger.error('failed looking for step value: {}, {}, {}'.format(step_name, exc_info()[0], exc_info()[1]))
+
+    return value
+
+# step_name -> e.g. light_intensity, air_fush
+# value names -> tuple list of value names to return
+#
+def get_current_recipe_step_values(step_name, value_names):
+
+    values = None 
+
+    try:
+        times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step'][step_name]
+        if len(times) > 0:
+            
+            for t in times:
+
+                past_start = False
+                lt_end = False
+               
+                # accept times as either integers (i.e the hour) or strings (e.g. hh:mm)
+                if isinstance(t['start_time'], int):
+                    start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
+                else:
+                    start = t['start_time'].split(':')
+
+                if start[0] <= climate_state['cur_hour']: 
+                    if len(start) > 1:
+                        if start[1] <= climate_state['cur_min']:
+                            past_start = True
+                        else:
+                            past_start = False
+                    else:
+                        past_start = True 
+
+                if isinstance(t['end_time'], int):
+                    end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
+                else:
+                    end = t['end_time'].split(':')
+                
+                if len(end) == 1:
+                    if end[0] > climate_state['cur_hour']: 
+                        lt_end = True
+                    else:
+                        lt_end = False
+                else:
+                    if (end[0] > climate_state['cur_hour']) or\
+                       (end[0] == climate_state['cur_hour'] and end[1] > climate_state['cur_min']):
+                            lt_end = True
+                    else:
+                        lt_end = False 
+
+                if past_start and lt_end:
+
+                    values = {}
+
+                    for vn in value_names:
+                        if vn in t:
+                            values[vn] = t[vn]
+                        else:
+                            logger.warning('cannot find value {} in step {}.'.format(vn, step_name))
+
+                # logger.info('start: {}, end: {}, past_start: {}, lt_end: {}'.format(start, end, past_start, lt_end))
+
+        else:
+            if climate_state['log_cycle']:
+                logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
+
+    except:
+        logger.error('failed looking for step values: {}, {}, {}'.format(step_name, exc_info()[0], exc_info()[1]))
+
+    return values
+
+def check_lights(light_controller):
+    
+    value = get_current_recipe_step_value('light_intensity')
+
+    if value != None:
+        if value  == 1:
+            if not climate_state['grow_light_on']: 
+                light_controller['cmd']('on', 'grow_light')
+                climate_state['grow_light_on'] = True
+                climate_state['grow_light_last_on_time'] = climate_state['cur_time'] 
+        else:
+            if climate_state['grow_light_on']:
+                climate_state['grow_light_on'] = False 
+                climate_state['grow_light_last_off_time'] = climate_state['cur_time']
+                light_controller['cmd']('off', 'grow_light')
+    else:
+        if climate_state['grow_light_on']:
+            climate_state['grow_light_on'] = False 
+            climate_state['grow_light_last_off_time'] = climate_state['cur_time']
+            light_controller['cmd']('off', 'grow_light')
 
 
-    # if we are in a cycle
-        # if the cycle has light instrucionts
-            # step through each light instruciont
-            # if the current light instruciton is on then
-               # app_state['sys']['cmd'](args['light_on_cmd'])
-            # if the current light instruciotn is off then
-               # app_state['sys']['cmd'](args['light_off_cmd'])
-    """
-           cur_min = datetime.datetime.now().minute
-           if cur_min > climate_state['cur_min']:
-               climate_state['cur_min'] = cur_min
-    """
+def check_vent_fan(controller):
+
+    values = get_current_recipe_step_values('air_flush', ('interval', 'duration'))
+    fan_on = None
+
+    #logger.debug('vent_fan_on: {}, vent_last_on_time: {}, cur_time: {}, duration: {}, interval: {}'.format(climate_state['vent_fan_on'], climate_state['vent_last_on_time'], climate_state['cur_time'], values['duration'], values['interval']))
+
+    if values != None and climate_state['vent_last_on_time'] != None:
+        if climate_state['vent_fan_on'] and climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['duration']:
+            fan_on = False
+        if not climate_state['vent_fan_on'] and\
+               climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['interval']:
+            fan_on = True
+    elif values != None and climate_state['vent_last_on_time'] == None:
+        # Assume this is a startup state.  There are recipe values for the flush flan but no history on the flushing so go 
+        # ahead and start a flush cycle.
+        fan_on = True
+    else:
+        # There are no recipe values for flushing so leave the fan off.
+        fan_on = False
+
+    if fan_on != None:
+        if fan_on:
+            climate_state['vent_fan_on'] = True
+            climate_state['vent_last_on_time'] = climate_state['cur_time']
+            controller['cmd']('on', 'vent_fan') 
+            logger.info('turning vent fan on') 
+        else:
+            climate_state['vent_fan_on'] = False
+            controller['cmd']('off', 'vent_fan') 
+            logger.info('turning vent fan off') 
+
 
 def get_phase_index(cur_day_index, phases):
 
@@ -205,7 +411,31 @@ def get_phase_index(cur_day_index, phases):
     except:
         logger.error('cannot update phase index: {}, {}'.format(exc_info()[0], exc_info()[1]))
         return None
-       
+
+def update_climate_state(min_log_period):
+
+    now = datetime.datetime.now()
+    
+    climate_state['cur_min'] = now.minute
+    climate_state['cur_hour'] = now.hour
+    
+    if climate_state['recipe_start_time'] != None:
+        climate_state['cur_day'] = (now - datetime.datetime.fromtimestamp(climate_state['recipe_start_time'])).days
+    else:
+        climate_state['cur_day'] = None
+
+    climate_state['cur_phase_index'] = get_phase_index(climate_state['cur_day'], climate_state['recipe']['phases'])
+
+    climate_state['cur_time'] = time.time()   # Return the time in seconds since the epoch as a floating point number.
+
+    if climate_state['cur_time']  - climate_state['last_log_time'] >= min_log_period:   
+        climate_state['last_log_time'] = climate_state['cur_time']
+        climate_state['log_cycle'] =  True
+    else:
+        climate_state['log_cycle'] = False
+
+    # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
+    #             climate_state['last_log_time'], climate_state['log_cycle']))
 
 def start(app_state, args, barrier):
 
@@ -216,6 +446,7 @@ def start(app_state, args, barrier):
     app_state[args['name']] = {}
     app_state[args['name']]['help'] = make_help(args['name']) 
     app_state[args['name']]['state'] = show_state
+    app_state[args['name']]['recipe'] = show_recipe
     app_state[args['name']]['cmd'] = cmd
 
     init_state(args)
@@ -227,17 +458,18 @@ def start(app_state, args, barrier):
 
        if climate_state['run_mode'] == 'on': 
 
-           climate_state['cur_phase_index'] = get_phase_index(climate_state['cur_day'], climate_state['recipe']['phases'])
-           log_
+           update_climate_state(args['min_log_period'])
 
-           check_lights(args['log_period_mins'])
+           # TBD - need to make 'mc' configurable from config file.
+           check_lights(app_state['mc'])
 
-           #check_air_flush()
+           check_vent_fan(app_state['mc'])
+           
            #check_air_temperature()
 
-       write_state_file(args['state_file'], args['state_file_write_interval'])
+       write_state_file(args['state_file'], args['state_file_write_interval'], False)
 
        sleep(1)
 
-    write_state_file(args['state_file'], args['state_file_write_interval'])
+    write_state_file(args['state_file'], args['state_file_write_interval'], True)
     logger.info('exiting climate controller thread')
