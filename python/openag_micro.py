@@ -13,6 +13,19 @@ import serial
 from python.logger import get_sub_logger 
 logger = get_sub_logger(__name__)
 
+reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
+                 'water_ec':7, 'shell_off':8, 'window_off':9}
+
+def make_get(vals):
+
+    def get(value_name):
+        if value_name in reading_names:
+            return vals[reading_names[value_name]] #vals[reading_names[value_name]]
+        else:
+            return 'illegal value_name. Please specify one of {}.'.format(reading_names)
+
+    return get
+
 # The Food Computer V1 senses 8 things with 6 sensors -> air humidity, air temp, light par, light lumens,
 # air co2, water ph, water temp, and water ec.
 # TBD Need to add window and shell switch sensors.
@@ -51,11 +64,17 @@ def create_sensor_reading_dict(args):
                 'attribute':'window_off', 'value':None, 'units':'None', 'ts':None},
    ]
 
-# Provide a lock so that multiple threads can share the serial interface to the Arduino
+# Provide a lock so that multiple threads are forced to wait for commands that
+# use the Arudiuno serial interface
+#
 serial_interface_lock = Lock()
 
 # FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
 #                    vent fan, circulation fan, chamber lights, motherboard lights.
+#
+target_indexes = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3, 
+                  'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
+#
 cur_command = [0,0,0,0,0,0,0,0]
 cur_mc_cmd_str = None
 old_mc_cmd_str = None
@@ -121,7 +140,10 @@ def make_help(args):
         s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
         s = s + "{}.cmd('on':'off', target)   - Turn an actuator on or off. Targets:\n".format(prefix)
         s = s + '                               grow_light, vent_fan\n'
-        s = s + "{}.grow_light('on'|'off')    - Turns the grow light on or off.\n".format(prefix)
+        s = s + '{}.get(value_name)           - Get value such as air temperature.\n'.format(prefix)
+        s = s + '                               The following value names are recognized:\n'
+        s = s + '                               humidity, air_temp, TBD add other available options to this help message.\n'
+        #- s = s + "{}.grow_light('on'|'off')    - Turns the grow light on or off.\n".format(prefix)
         s = s + "{0}.mc_cmd(mc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
         s = s + "                               mc_cmd_str is specified as a string -> {0}.mc_cmd(\"(help)\") or {0}.mc_cmd('(help)')\n".format(prefix)
         s = s + "                               Embed quotes (\") by using the \ character -> {0}.mc_cmd(\"(c 'co2 'ser ".format(prefix) + r'\"Z\")")' + '\n'
@@ -134,6 +156,7 @@ def make_help(args):
 
     return help
 
+"""
 def grow_light_controller(cmd):
 
     global cur_command
@@ -151,10 +174,11 @@ def grow_light_controller(cmd):
     else:
         logger.error('unknown command received: {}'.format(cmd))
         return "unknown light state specified. Specify 'on' or 'off'"
+"""
 
-# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
-#                    vent fan, circulation fan, chamber lights, motherboard lights.
-target_indexes = {'grow_light':1, 'vent_fan': 4}
+def get(value_name):
+
+    return 'OK'
 
 def cmd(cmd, target): 
 
@@ -330,12 +354,12 @@ def start(app_state, args, b):
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    app_state[args['name']]['grow_light'] = grow_light_controller
     app_state[args['name']]['cmd'] = cmd
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    
     vals = app_state[args['name']]['sensor_readings'] = create_sensor_reading_dict(args)
+    app_state[args['name']]['get'] = make_get(vals) 
 
     # Start the fc loop and and let it run for n seconds where n = args['mc_start_delay'].
     # 10 is recommened for the fc version 1 in order to wait for the

@@ -137,6 +137,11 @@ def show_state():
         else:
             s = s + 'Last vent fan on time: None\n'
 
+        s = s + 'Air heater on: {}\n'.format(climate_state['air_heater_on'])
+        s = s + 'Air temperature: {}\n'.format(climate_state['cur_air_temp'])
+        s = s + 'Air heater last on time: {}\n'.format(climate_state['air_heater_last_on_time'])
+        s = s + 'Air heater last off time: {}\n'.format(climate_state['air_heater_last_off_time'])
+
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
         return s
@@ -198,6 +203,11 @@ def init_state(args):
 
     climate_state['vent_fan_on'] = False
     climate_state['vent_last_on_time'] = None
+
+    climate_state['air_heater_on'] =  False
+    climate_state['cur_air_temp'] = None
+    climate_state['air_heater_last_on_time'] = None
+    climate_state['air_heater_last_off_time'] = None
 
     # climate_state['cur_time'] = 0 
     climate_state['last_log_time'] = 0
@@ -333,26 +343,31 @@ def get_current_recipe_step_values(step_name, value_names):
 
     return values
 
-def check_lights(light_controller):
+def check_lights(controller):
     
     value = get_current_recipe_step_value('light_intensity')
+    light_on = None
 
     if value != None:
         if value  == 1:
             if not climate_state['grow_light_on']: 
-                light_controller['cmd']('on', 'grow_light')
-                climate_state['grow_light_on'] = True
-                climate_state['grow_light_last_on_time'] = climate_state['cur_time'] 
+                light_on = True
         else:
             if climate_state['grow_light_on']:
-                climate_state['grow_light_on'] = False 
-                climate_state['grow_light_last_off_time'] = climate_state['cur_time']
-                light_controller['cmd']('off', 'grow_light')
+                light_on = False 
     else:
         if climate_state['grow_light_on']:
+            light_on = False 
+
+    if light_on != None:
+        if light_on:
+            climate_state['grow_light_on'] = True
+            climate_state['grow_light_last_on_time'] = climate_state['cur_time'] 
+            controller['cmd']('on', 'grow_light') 
+        else:
             climate_state['grow_light_on'] = False 
             climate_state['grow_light_last_off_time'] = climate_state['cur_time']
-            light_controller['cmd']('off', 'grow_light')
+            controller['cmd']('off', 'grow_light')
 
 
 def check_vent_fan(controller):
@@ -388,6 +403,49 @@ def check_vent_fan(controller):
             logger.info('turning vent fan off') 
 
 
+def check_air_temperature(controller):
+
+    values = get_current_recipe_step_values('air_temperature', ('low_limit', 'high_limit'))
+    heater_on = None
+
+    if values != None:
+        if values ['high_limit'] - values['low_limit'] >= 1:
+            if climate_state['cur_air_temp'] != None:
+                if climate_state['cur_air_temp'] > values['high_limit'] and not climate_state['air_heater_on']:
+                    heater_on = True
+                elif climate_state['cur_air_temp'] <= values['high_limit'] and climate_state['air_heater_on']:
+                    heater_on = False
+            else:
+                logger.warning('No air temperature avaialble. Will turn heater off.')
+                heater_on = False 
+        else:
+            if climate_state['log_cycle']: 
+                logger.error('illegal values for high and low limits. high limit must be at least 1 degrees higher than' +\
+                             ' low limit.')
+
+    else:
+        logger.info('no temperature instructions found')
+        heater_on = False
+
+    # Don't run the heater for more than 30 minutes.
+    if climate_state['air_heater_on'] and climate_state['cur_time'] - climate_state['air_heater_last_on_time'] > 60 * 30:
+        heater_on = False
+
+    if heater_on != None:
+        if heater_on:
+            # Don't turn the heater on more than once per minute.
+            if climate_state['cur_time'] - climate_state['air_heater_last_on_time'] >= 60: 
+                logger.info('turning the air heater on')
+                climate_state['air_heater_on'] = True
+                climate_state['air_heater_last_on_time'] = climate_state['cur_time']
+                controller['cmd']('air_heater', 'on')
+        else:
+            logger.info('turning the air heater off')
+            climate_state['air_heater_on'] = False 
+            climate_state['air_heater_last_off_time'] = climate_state['cur_time']
+            controller['cmd']('air_heater', 'off')
+
+
 def get_phase_index(cur_day_index, phases):
 
     try:
@@ -412,7 +470,7 @@ def get_phase_index(cur_day_index, phases):
         logger.error('cannot update phase index: {}, {}'.format(exc_info()[0], exc_info()[1]))
         return None
 
-def update_climate_state(min_log_period):
+def update_climate_state(min_log_period, controller):
 
     now = datetime.datetime.now()
     
@@ -433,6 +491,13 @@ def update_climate_state(min_log_period):
         climate_state['log_cycle'] =  True
     else:
         climate_state['log_cycle'] = False
+
+    at = controller['get']('air_temp')['value']
+    try:
+        climate_state['cur_air_temp'] = float(at)
+    except:
+        if climate_state['log_cycle']:
+            logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
 
     # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
     #             climate_state['last_log_time'], climate_state['log_cycle']))
@@ -458,14 +523,14 @@ def start(app_state, args, barrier):
 
        if climate_state['run_mode'] == 'on': 
 
-           update_climate_state(args['min_log_period'])
+           update_climate_state(args['min_log_period'], app_state['mc'])
 
            # TBD - need to make 'mc' configurable from config file.
            check_lights(app_state['mc'])
 
            check_vent_fan(app_state['mc'])
            
-           #check_air_temperature()
+           check_air_temperature(app_state['mc'])
 
        write_state_file(args['state_file'], args['state_file_write_interval'], False)
 
