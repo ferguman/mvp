@@ -131,6 +131,13 @@ def extract_sensor_values(mc_response, vals):
         for r in vals:
             r['value'] = None
 
+"""
+reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
+                 'water_ec':7, 'shell_off':8, 'window_off':9}
+target_indexes = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3, 
+                  'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
+"""
+
 def make_help(args):
 
     def help():
@@ -139,7 +146,8 @@ def make_help(args):
 
         s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
         s = s + "{}.cmd('on':'off', target)   - Turn an actuator on or off. Targets:\n".format(prefix)
-        s = s + '                               grow_light, vent_fan\n'
+        s = s + "                               Run {}.cmd('st') to see the possible values for the target argument\n".format(prefix)
+        s = s + "{}.cmd('show_targets'|'st')  - Show all the available target values\n".format(prefix)
         s = s + '{}.get(value_name)           - Get value such as air temperature.\n'.format(prefix)
         s = s + '                               The following value names are recognized:\n'
         s = s + '                               humidity, air_temp, TBD add other available options to this help message.\n'
@@ -156,53 +164,56 @@ def make_help(args):
 
     return help
 
-"""
-def grow_light_controller(cmd):
-
-    global cur_command
-
-    if cmd == 'on':
-        if cur_command[1] == 0:
-            logger.info('Recevied light on command. Will turn light on.')
-        cur_command[1] = 1
-        return 'OK'
-    elif cmd == 'off':
-        if cur_command[1] == 1:
-            logger.info('Recevied light off command. Will turn light off.')
-        cur_command[1] = 0
-        return 'OK'
-    else:
-        logger.error('unknown command received: {}'.format(cmd))
-        return "unknown light state specified. Specify 'on' or 'off'"
-"""
-
 def get(value_name):
 
     return 'OK'
 
-def cmd(cmd, target): 
+#- def cmd(cmd, target): 
+def cmd(*args): 
 
-    if target in target_indexes:
+    cmd= args[0]
 
-        target_index = target_indexes[target]
-        global cur_command
+    # is this a show_target command
+    if cmd == 'show_targets' or cmd == 'st':
+        s  = None
+        for t in target_indexes:
+            if s == None:
+                s = t
+            else:
+                s = s + ', ' + t
+        return s
 
-        if cmd == 'on':
-            if cur_command[target_index] == 0:
-                logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
-            cur_command[target_index] = 1
-            return 'OK'
-        elif cmd == 'off':
-            if cur_command[target_index] == 1:
-                logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
-            cur_command[target_index] = 0
-            return 'OK'
+    # is this an on or off command?
+    if cmd == 'on' or cmd == 'off':
+
+        target = args[1]
+
+        if target in target_indexes:
+
+            target_index = target_indexes[target]
+            global cur_command
+
+            if cmd == 'on':
+                if cur_command[target_index] == 0:
+                    logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
+                cur_command[target_index] = 1
+                return 'OK'
+            elif cmd == 'off':
+                if cur_command[target_index] == 1:
+                    logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
+                cur_command[target_index] = 0
+                return 'OK'
+            """
+            else:
+                logger.error('unknown command received: {}'.format(cmd))
+                return "unknown cmd. Specify 'on' or 'off'"
+            """
         else:
-            logger.error('unknown command received: {}'.format(cmd))
-            return "unknown cmd. Specify 'on' or 'off'"
-    else:
-        return 'unknown target.'
+            logger.error('Unknown command target received: {}'.format(target))
+            return 'unknown target.'
 
+    logger.error('unknown command received: {}'.format(cmd))
+    return "unknown cmd. Specify 'on' or 'off'"
 
 def make_mc_cmd(ser):
 

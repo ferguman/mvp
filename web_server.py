@@ -27,7 +27,7 @@ check_python_version()
 # Load the necessary python libraries
 from http.server import SimpleHTTPRequestHandler
 from os import chdir, getcwd
-from socketserver import  TCPServer
+from socketserver import TCPServer
 from sys import path 
 
 from python.verify_config_files import verify_web_config_file

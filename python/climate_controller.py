@@ -4,6 +4,7 @@
 
 from os import path, getcwd
 from sys import exc_info
+from threading import Lock
 from time import sleep, time
 import datetime
 import json
@@ -12,6 +13,10 @@ import time
 from python.logData import logDB
 from python.logger import get_sub_logger 
 
+# Provide a lock to control access to the climate controller state
+#
+state_lock = Lock()
+
 logger = get_sub_logger(__name__)
 
 # State variables:
@@ -19,6 +24,8 @@ logger = get_sub_logger(__name__)
 # 2) run_mode: 'on' or 'off'
 climate_state = {} 
 
+# Load the recipe file found at rel_path and stick the JSON into climate_state['recipe']
+#
 def load_recipe_file(rel_path):
 
     climate_state['recipe'] = None
@@ -79,12 +86,19 @@ def make_help(prefix):
 
     def help():
 
-        s =     '{}.help()                         - Displays this help page.\n'.format(prefix)
-        s = s + "{}.cmd('start'|'stop', options)   - Execute the given command.\n".format(prefix)
-        s = s + "                                    {}.cmd('start', day_index=n) - start recipe on the designated day (0 based). If no day_index is supplied then start on day 0.\n".format(prefix)
-        s = s + "                                    e.g. {}.cmd('start', day_index=2) to start recipe on 3rd day.\n".format(prefix)
-        s = s + "                                    {}.cmd('stop') - stop the current recipe.\n".format(prefix)
-        s = s + '{}.state()                        - Show climate controller state.\n'.format(prefix)
+        cmd_pre = "{}.".format(prefix)
+        nul_pre = ' ' * len(cmd_pre)
+
+        s =     cmd_pre + 'help()                     - Displays this help page.\n'
+        s = s + cmd_pre + "cmd('start', day_index=n)  - Start a recipe on the designated day (0 based). If no day_index is\n"
+        s = s + nul_pre + '                             supplied then start on day 0.\n'
+        s = s + nul_pre + "                             e.g. {}.cmd('start', day_index=2) to start a recipe at 3rd day.\n".format(prefix)
+        s = s + nul_pre + "                             {}.cmd('stop') - stop the current recipe.\n".format(prefix)
+        s = s + cmd_pre + "cmd('load_recipe'|'lr',\n" 
+        s = s + nul_pre + '    recipe_file=path)      - Load a recipe file. If no recipe_file argument is given\n'
+        s = s + nul_pre + '                             then load the default recipe file as specified in the configuration file.\n'
+        s = s + nul_pre + "                           - e.g. {}.cmd('lr', recipe_path='/climate_recipes/test1.rcp')\n".format(prefix)
+        s = s + cmd_pre + 'state()                    - Show climate controller state.\n'
         
         return s
 
@@ -97,6 +111,14 @@ def show_recipe():
     else:
         return None 
 
+def show_date(date, prelude_msg):
+
+    if date != None:
+        return prelude_msg + ': {}\n'.format(datetime.datetime.fromtimestamp(date))
+    else:
+        return prelude_msg + ': None\n'
+
+
 def show_state():
 
     try:
@@ -107,10 +129,7 @@ def show_state():
         else:
             s = s + 'Recipe id: None\n'
 
-        if climate_state['recipe_start_time'] != None:
-            s = s + 'Recipe start time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['recipe_start_time']))
-        else:
-            s = s + 'Recipe start time: None\n'
+        s = s + show_date(climate_state['recipe_start_time'], 'Recipe start time')
 
         s = s + 'Current day index: {}\n'.format(climate_state['cur_day'])
         s = s + 'Current hour: {}\n'.format(climate_state['cur_hour'])
@@ -121,26 +140,17 @@ def show_state():
         s = s + 'Current phase index: {}\n'.format(climate_state['cur_phase_index'])   
 
         s = s + 'Grow light on: {}\n'.format(climate_state['grow_light_on'])
-        if climate_state['grow_light_last_on_time'] != None:
-            s = s + 'Last grow light on time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['grow_light_last_on_time']))
-        else:
-            s = s + 'Last grow light on time: None\n'
-
-        if climate_state['grow_light_last_off_time'] != None:
-            s = s + 'Last grow light off time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['grow_light_last_off_time']))
-        else:
-            s = s + 'Last grow light off time: None\n'
+        s = s + show_date(climate_state['grow_light_last_on_time'], 'Last grow light on time')
+        s = s + show_date(climate_state['grow_light_last_off_time'], 'Last grow light off time')
 
         s = s + 'Vent fan on: {}\n'.format(climate_state['vent_fan_on'])
-        if climate_state['vent_last_on_time'] != None:
-            s = s + 'Last vent fan on time: {}\n'.format(datetime.datetime.fromtimestamp(climate_state['vent_last_on_time']))
-        else:
-            s = s + 'Last vent fan on time: None\n'
+        s = s + show_date(climate_state['vent_last_on_time'], 'Last vent fan on time')
 
         s = s + 'Air heater on: {}\n'.format(climate_state['air_heater_on'])
         s = s + 'Air temperature: {}\n'.format(climate_state['cur_air_temp'])
-        s = s + 'Air heater last on time: {}\n'.format(climate_state['air_heater_last_on_time'])
-        s = s + 'Air heater last off time: {}\n'.format(climate_state['air_heater_last_off_time'])
+
+        s = s + show_date(climate_state['air_heater_last_on_time'], 'Air heater last on time')
+        s = s + show_date(climate_state['air_heater_last_off_time'], 'Air heater last off time')
 
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
@@ -150,27 +160,46 @@ def show_state():
         logger.error('show_state command {}{}'.format(exc_info()[0], exc_info()[1]))
         return "Error - can't show stat"
 
-def cmd(*args, **kwargs):
-   
-    if len(args) == 1:
-        if args[0] == 'start':
+def make_cmd(config_args):
 
-            if 'day_index' in kwargs:
-                climate_state['cur_day'] = kwargs['day_index']
+    def cmd(*args, **kwargs):
+
+        state_lock.acquire()
+
+        try: 
+            if len(args) == 1:
+                if args[0] == 'start':
+
+                    if 'day_index' in kwargs:
+                        climate_state['cur_day'] = kwargs['day_index']
+                    else:
+                        climate_state['cur_day'] = 0
+
+                    climate_state['run_mode'] = 'on'
+                    climate_state['recipe_start_time'] = (datetime.datetime.now()\
+                        - datetime.timedelta(days=climate_state['cur_day'])).timestamp()
+                    return 'OK'
+                elif args[0] == 'stop':
+                    climate_state['run_mode'] = 'off'
+                    climate_state['recipe_start_time'] = None
+                    return 'OK'
+                elif args[0] == 'load_recipe' or args[0] == 'lr':
+                    if not 'recipe_file' in kwargs:
+                        load_recipe_file(config_args['default_recipe_file'])
+                    else:
+                        load_recipe_file(kwargs['recipe_file'])
+                    return 'OK'
+                else:
+                    return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
             else:
-                climate_state['cur_day'] = 0
+                return "you must supply a cmd (e.g. 'start')"
+        except:
+            logger.error('cmd execution failed: {}, {}'.format(exc_info()[0], exc_info()[1]))
 
-            climate_state['run_mode'] = 'on'
-            climate_state['recipe_start_time'] = (datetime.datetime.now() - datetime.timedelta(days=climate_state['cur_day'])).timestamp()
-            return 'OK'
-        elif args[0] == 'stop':
-            climate_state['run_mode'] = 'off'
-            climate_state['recipe_start_time'] = None
-            return 'OK'
-        else:
-            return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
-    else:
-        return "you must supply a cmd (e.g. 'start')"
+        finally:
+            state_lock.release()
+
+    return cmd
 
 
 def init_state(args):
@@ -187,7 +216,6 @@ def init_state(args):
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
     climate_state['last_state_file_update_time'] = time.time()
-
 
     now = datetime.datetime.now()
     climate_state['cur_min'] = now.minute
@@ -409,18 +437,25 @@ def check_air_temperature(controller):
     heater_on = None
 
     if values != None:
-        if values ['high_limit'] - values['low_limit'] >= 1:
+        # TBD - Need to set the temperature gap based upon the controllers abilities. The FCV1 temperature sensor
+        #       is not that accurate so to avoid the heater going and off we enforce a minimal difference of 2.
+        #       The reason the recipe can specify different values is to allow people to set wide ranges so that
+        #       they don't need to use their heater a lot if that is their desire.
+        if values ['high_limit'] - values['low_limit'] >= 2:
+
+            mid_val_temp = (values ['high_limit'] + values['low_limit'])/2.0 
+
             if climate_state['cur_air_temp'] != None:
-                if climate_state['cur_air_temp'] > values['high_limit'] and not climate_state['air_heater_on']:
+                if climate_state['cur_air_temp'] < values['low_limit'] and not climate_state['air_heater_on']:
                     heater_on = True
-                elif climate_state['cur_air_temp'] <= values['high_limit'] and climate_state['air_heater_on']:
+                elif climate_state['cur_air_temp'] > (values['low_limit'] + mid_val_temp) and climate_state['air_heater_on']:
                     heater_on = False
             else:
                 logger.warning('No air temperature avaialble. Will turn heater off.')
                 heater_on = False 
         else:
             if climate_state['log_cycle']: 
-                logger.error('illegal values for high and low limits. high limit must be at least 1 degrees higher than' +\
+                logger.error('illegal values for high and low limits. high limit must be at least 2 degrees Celsius higher than' +\
                              ' low limit.')
 
     else:
@@ -428,22 +463,36 @@ def check_air_temperature(controller):
         heater_on = False
 
     # Don't run the heater for more than 30 minutes.
-    if climate_state['air_heater_on'] and climate_state['cur_time'] - climate_state['air_heater_last_on_time'] > 60 * 30:
-        heater_on = False
+    if climate_state['air_heater_on']:
+        if climate_state['air_heater_last_on_time'] != None and\
+           climate_state['cur_time'] - climate_state['air_heater_last_on_time'] > 30 * 60:
+
+            heater_on = False
+
+    # If the last run was for over 29 minutes then let the heater rest for 5 minutes
+    if not climate_state['air_heater_on']:
+        if (climate_state['air_heater_last_off_time'] != None and climate_state['air_heater_last_on_time'] != None) and\
+           (climate_state['air_heater_last_off_time'] - climate_state['air_heater_last_on_time']  > 29 * 60) and\
+           (climate_state['cur_time'] - climate_state['air_heater_last_off_time']) < 5 * 60: 
+           
+            heater_on = False
 
     if heater_on != None:
         if heater_on:
+
             # Don't turn the heater on more than once per minute.
-            if climate_state['cur_time'] - climate_state['air_heater_last_on_time'] >= 60: 
+            if climate_state['air_heater_last_on_time'] == None or\
+               climate_state['cur_time'] - climate_state['air_heater_last_on_time'] >= 60: 
+                   
                 logger.info('turning the air heater on')
                 climate_state['air_heater_on'] = True
                 climate_state['air_heater_last_on_time'] = climate_state['cur_time']
-                controller['cmd']('air_heater', 'on')
+                controller['cmd']('on', 'air_heat')
         else:
             logger.info('turning the air heater off')
             climate_state['air_heater_on'] = False 
             climate_state['air_heater_last_off_time'] = climate_state['cur_time']
-            controller['cmd']('air_heater', 'off')
+            controller['cmd']('off', 'air_heat')
 
 
 def get_phase_index(cur_day_index, phases):
@@ -512,7 +561,7 @@ def start(app_state, args, barrier):
     app_state[args['name']]['help'] = make_help(args['name']) 
     app_state[args['name']]['state'] = show_state
     app_state[args['name']]['recipe'] = show_recipe
-    app_state[args['name']]['cmd'] = cmd
+    app_state[args['name']]['cmd'] = make_cmd(args)
 
     init_state(args)
 
@@ -521,18 +570,28 @@ def start(app_state, args, barrier):
 
     while not app_state['stop']:
 
-       if climate_state['run_mode'] == 'on': 
+       state_lock.acquire()
 
-           update_climate_state(args['min_log_period'], app_state['mc'])
+       try:
+           if climate_state['run_mode'] == 'on': 
 
-           # TBD - need to make 'mc' configurable from config file.
-           check_lights(app_state['mc'])
+               update_climate_state(args['min_log_period'], app_state['mc'])
 
-           check_vent_fan(app_state['mc'])
-           
-           check_air_temperature(app_state['mc'])
+               # TBD - need to make 'mc' configurable from config file.
+               check_lights(app_state['mc'])
 
-       write_state_file(args['state_file'], args['state_file_write_interval'], False)
+               check_vent_fan(app_state['mc'])
+               
+               check_air_temperature(app_state['mc'])
+
+           # Every once in a while write the state to the state file to make sure the file 
+           # stays up to date.  TBD: A more sophisticated system would write only when
+           # changes were made.
+           #
+           write_state_file(args['state_file'], args['state_file_write_interval'], False)
+
+       finally:
+           state_lock.release()
 
        sleep(1)
 
