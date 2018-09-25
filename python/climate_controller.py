@@ -93,11 +93,11 @@ def make_help(prefix):
         s = s + cmd_pre + "cmd('start', day_index=n)  - Start a recipe on the designated day (0 based). If no day_index is\n"
         s = s + nul_pre + '                             supplied then start on day 0.\n'
         s = s + nul_pre + "                             e.g. {}.cmd('start', day_index=2) to start a recipe at 3rd day.\n".format(prefix)
-        s = s + nul_pre + "                             {}.cmd('stop') - stop the current recipe.\n".format(prefix)
         s = s + cmd_pre + "cmd('load_recipe'|'lr',\n" 
         s = s + nul_pre + '    recipe_file=path)      - Load a recipe file. If no recipe_file argument is given\n'
         s = s + nul_pre + '                             then load the default recipe file as specified in the configuration file.\n'
         s = s + nul_pre + "                           - e.g. {}.cmd('lr', recipe_path='/climate_recipes/test1.rcp')\n".format(prefix)
+        s = s + cmd_pre + "cmd('stop')                - stop the current recipe.\n".format(prefix)
         s = s + cmd_pre + 'state()                    - Show climate controller state.\n'
         
         return s
@@ -185,6 +185,7 @@ def make_cmd(config_args):
                     return 'OK'
                 elif args[0] == 'load_recipe' or args[0] == 'lr':
                     if not 'recipe_file' in kwargs:
+                        # TBD - Need to 1st check to make sure the file exists and then warn user if it does not exist.
                         load_recipe_file(config_args['default_recipe_file'])
                     else:
                         load_recipe_file(kwargs['recipe_file'])
@@ -241,66 +242,6 @@ def init_state(args):
     climate_state['last_log_time'] = 0
     climate_state['log_cycle'] = False
 
-# step_name -> e.g. light_intensity, air_fush
-#
-def get_current_recipe_step_value(step_name):
-
-    value = None
-
-    try:
-        times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step'][step_name]
-        if len(times) > 0:
-            
-            for t in times:
-
-                past_start = False
-                lt_end = False
-               
-                # accept times as either integers (i.e the hour) or strings (e.g. hh:mm)
-                if isinstance(t['start_time'], int):
-                    start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
-                else:
-                    start = t['start_time'].split(':')
-
-                if start[0] <= climate_state['cur_hour']: 
-                    if len(start) > 1:
-                        if start[1] <= climate_state['cur_min']:
-                            past_start = True
-                        else:
-                            past_start = False
-                    else:
-                        past_start = True 
-
-                if isinstance(t['end_time'], int):
-                    end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
-                else:
-                    end = t['end_time'].split(':')
-                
-                if len(end) == 1:
-                    if end[0] > climate_state['cur_hour']: 
-                        lt_end = True
-                    else:
-                        lt_end = False
-                else:
-                    if (end[0] > climate_state['cur_hour']) or\
-                       (end[0] == climate_state['cur_hour'] and end[1] > climate_state['cur_min']):
-                            lt_end = True
-                    else:
-                        lt_end = False 
-
-                if past_start and lt_end:
-                    value = t['value']
-
-                # logger.info('start: {}, end: {}, past_start: {}, lt_end: {}'.format(start, end, past_start, lt_end))
-
-        else:
-            if climate_state['log_cycle']:
-                logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
-
-    except:
-        logger.error('failed looking for step value: {}, {}, {}'.format(step_name, exc_info()[0], exc_info()[1]))
-
-    return value
 
 # step_name -> e.g. light_intensity, air_fush
 # value names -> tuple list of value names to return
@@ -310,7 +251,9 @@ def get_current_recipe_step_values(step_name, value_names):
     values = None 
 
     try:
+        
         times = climate_state['recipe']['phases'][climate_state['cur_phase_index']]['step'][step_name]
+
         if len(times) > 0:
             
             for t in times:
@@ -319,7 +262,7 @@ def get_current_recipe_step_values(step_name, value_names):
                 lt_end = False
                
                 # accept times as either integers (i.e the hour) or strings (e.g. hh:mm)
-                if isinstance(t['start_time'], int):
+                if isinstance(t['start_time'], (int, float)):
                     start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
                 else:
                     start = t['start_time'].split(':')
@@ -333,7 +276,7 @@ def get_current_recipe_step_values(step_name, value_names):
                     else:
                         past_start = True 
 
-                if isinstance(t['end_time'], int):
+                if isinstance(t['end_time'], (int, float)):
                     end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
                 else:
                     end = t['end_time'].split(':')
@@ -349,6 +292,8 @@ def get_current_recipe_step_values(step_name, value_names):
                             lt_end = True
                     else:
                         lt_end = False 
+                
+                #d logger.info('step name: {}, start: {}, end: {}, past_start: {}, lt_end: {}'.format(step_name, start, end, past_start, lt_end))
 
                 if past_start and lt_end:
 
@@ -360,7 +305,9 @@ def get_current_recipe_step_values(step_name, value_names):
                         else:
                             logger.warning('cannot find value {} in step {}.'.format(vn, step_name))
 
-                # logger.info('start: {}, end: {}, past_start: {}, lt_end: {}'.format(start, end, past_start, lt_end))
+                    # You've found the step that cooresponds to the current timeso now exit.
+                    return values
+
 
         else:
             if climate_state['log_cycle']:
@@ -373,11 +320,12 @@ def get_current_recipe_step_values(step_name, value_names):
 
 def check_lights(controller):
     
-    value = get_current_recipe_step_value('light_intensity')
+    value = get_current_recipe_step_values('light_intensity', ('value',))
+
     light_on = None
 
     if value != None:
-        if value  == 1:
+        if value['value']  == 1:
             if not climate_state['grow_light_on']: 
                 light_on = True
         else:
@@ -510,7 +458,7 @@ def get_phase_index(cur_day_index, phases):
                 return i
 
             else:
-                rcp_day_index = rcp_day_index + cur_cycles
+                rcp_day_index = rcp_day_index + rcp_phase_cycles
 
         logger.error('the current recipe does not apply to today. It may be over.')
         return None
