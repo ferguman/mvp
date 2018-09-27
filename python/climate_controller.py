@@ -259,9 +259,9 @@ def get_current_recipe_step_values(step_name, value_names):
             for t in times:
 
                 past_start = False
-                lt_end = False
+                lte_end = False
                
-                # accept times as either integers (i.e the hour) or strings (e.g. hh:mm)
+                # accept times as either integers, floats (i.e the hour) or strings (e.g. hh:mm)
                 if isinstance(t['start_time'], (int, float)):
                     start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
                 else:
@@ -282,20 +282,20 @@ def get_current_recipe_step_values(step_name, value_names):
                     end = t['end_time'].split(':')
                 
                 if len(end) == 1:
-                    if end[0] > climate_state['cur_hour']: 
-                        lt_end = True
+                    if end[0] >= climate_state['cur_hour']: 
+                        lte_end = True
                     else:
-                        lt_end = False
+                        lte_end = False
                 else:
-                    if (end[0] > climate_state['cur_hour']) or\
-                       (end[0] == climate_state['cur_hour'] and end[1] > climate_state['cur_min']):
-                            lt_end = True
+                    if (end[0] >= climate_state['cur_hour']) or\
+                       (end[0] == climate_state['cur_hour'] and end[1] >= climate_state['cur_min']):
+                            lte_end = True
                     else:
-                        lt_end = False 
+                        lte_end = False 
                 
-                #d logger.info('step name: {}, start: {}, end: {}, past_start: {}, lt_end: {}'.format(step_name, start, end, past_start, lt_end))
+                #d logger.info('step name: {}, start: {}, end: {}, past_start: {}, lte_end: {}'.format(step_name, start, end, past_start, lte_end))
 
-                if past_start and lt_end:
+                if past_start and lte_end:
 
                     values = {}
 
@@ -354,14 +354,16 @@ def check_vent_fan(controller):
     #logger.debug('vent_fan_on: {}, vent_last_on_time: {}, cur_time: {}, duration: {}, interval: {}'.format(climate_state['vent_fan_on'], climate_state['vent_last_on_time'], climate_state['cur_time'], values['duration'], values['interval']))
 
     if values != None and climate_state['vent_last_on_time'] != None:
-        if climate_state['vent_fan_on'] and climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['duration']:
+        if climate_state['vent_fan_on'] and\
+           climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['duration']:
+
             fan_on = False
         if not climate_state['vent_fan_on'] and\
                climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['interval']:
             fan_on = True
     elif values != None and climate_state['vent_last_on_time'] == None:
-        # Assume this is a startup state.  There are recipe values for the flush flan but no history on the flushing so go 
-        # ahead and start a flush cycle.
+        # Assume this is a startup state.  There are recipe values for the flush flan but 
+        # no history on the flushing so go ahead and start a flush cycle.
         fan_on = True
     else:
         # There are no recipe values for flushing so leave the fan off.
@@ -396,19 +398,20 @@ def check_air_temperature(controller):
             if climate_state['cur_air_temp'] != None:
                 if climate_state['cur_air_temp'] < values['low_limit'] and not climate_state['air_heater_on']:
                     heater_on = True
-                elif climate_state['cur_air_temp'] > (values['low_limit'] + mid_val_temp) and climate_state['air_heater_on']:
+                elif climate_state['cur_air_temp'] > (values['low_limit'] + mid_val_temp) and\
+                     climate_state['air_heater_on']:
                     heater_on = False
             else:
                 logger.warning('No air temperature avaialble. Will turn heater off.')
                 heater_on = False 
         else:
             if climate_state['log_cycle']: 
-                logger.error('illegal values for high and low limits. high limit must be at least 2 degrees Celsius higher than' +\
-                             ' low limit.')
+                logger.error('Illegal values for high and low limits. High limit must be ' +\
+                             'at least 2 degrees Celsius higher than low limit.')
 
     else:
-        logger.info('no temperature instructions found')
         heater_on = False
+        logger.info('No air temperature instructions found')
 
     # Don't run the heater for more than 30 minutes.
     if climate_state['air_heater_on']:
@@ -419,7 +422,8 @@ def check_air_temperature(controller):
 
     # If the last run was for over 29 minutes then let the heater rest for 5 minutes
     if not climate_state['air_heater_on']:
-        if (climate_state['air_heater_last_off_time'] != None and climate_state['air_heater_last_on_time'] != None) and\
+        if (climate_state['air_heater_last_off_time'] != None and\
+            climate_state['air_heater_last_on_time'] != None) and\
            (climate_state['air_heater_last_off_time'] - climate_state['air_heater_last_on_time']  > 29 * 60) and\
            (climate_state['cur_time'] - climate_state['air_heater_last_off_time']) < 5 * 60: 
            

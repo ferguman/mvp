@@ -165,15 +165,6 @@ def start(app_state, args, b):
             # TBD - app_state is "too much" to give here. We need to figure out how to pare it down to
             # app_state['sys']['cmd']
             mqtt_client = start_paho_mqtt_client(pw, app_state, publish_queue)[1]
-            """ -
-            result = start_paho_mqtt_client(pw, app_state, publish_queue)
-            if result[0] == True:
-                #- app_state[args['name']]['publish_queue'] = publish_queue
-                mqtt_client = result[1]
-            else:
-                logger.error('Unable to start an MQTT client. Exiting....')
-                mqtt_client =  None
-            """
 
         app_state[args['name']]['help'] = make_mqtt_help(args['name'])
 

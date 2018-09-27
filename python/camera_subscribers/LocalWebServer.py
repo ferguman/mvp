@@ -8,9 +8,14 @@ from sys import exc_info
 class LocalWebServer(CameraSubscriber):
 
     def new_picture(self, file_location):
-
+       #- self.destination_dir = kwargs.get('destination_dir')
        try:
-          current_image_copy_location = getcwd() + '/web/image.jpg'
+          #- current_image_copy_location = getcwd() + '/web/image.jpg'
+          # TODO - this is dangerouse because it allows write access to files outside this applications 
+          #        directory.  I'm doing it because to get the camera images to the local
+          #        Flask installation.  It would be safer to be able to say something like:
+          #        getcwd() + self.destination_dir
+          current_image_copy_location = self.destination_dir + 'image.jpg'
           CameraSubscriber.logger.info('updating local web site picture')
           CameraSubscriber.logger.debug('copying newest picture to web directory: source image'
                                       + ' path: {}, destination path: {}'.format(\
