@@ -7,21 +7,25 @@
 #   Note: pythone3 mvp.py --help  -> Will display available command line arguments.
 #
 # or run the program at startup as a systemd service using the following service file contents:
-#    [Unit]
-#    Description=mvp
-#    Wants=network-online.target
-#    After=network-online.target
-#
-#    [Service]
-#    WorkingDirectory=/home/pi/openag-mvp
-#    User=pi
-#    ExecStart=/usr/bin/python3 /home/pi/openag-mvp/mvp.py --silent
-#    Restart=on-failure
-#
-#    [Install]
-#    WantedBy=multi-user.target
-#
-#
+# edited to fit your particular situation.
+"""
+[Unit]
+Description=mvp
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/pi/openag-mvp
+User=pi
+ExecStart=/usr/bin/python3 /home/pi/openag-mvp/mvp.py --silent
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+"""
+# Notes on systemd
+# If your program uses a virtual environment then use the python located in the virtual environment bin folder.
+# After creating the systemd file run to 
 # The mvp provides a REPL loop for interactive operation. This loop can be turned off
 # by invoking the mvp in silent mode.
 #
@@ -39,7 +43,7 @@ from python.logger import get_top_level_logger
 from python.verify_config_files import verify_config_file
 logger = get_top_level_logger()
 
-logger.info('############## starting mvp')
+logger.info('############## starting farm operation platform device ################')
 
 # Check that the configuration file is present and then load it.
 verify_config_file()
@@ -50,18 +54,14 @@ import threading
 
 # Load mvp libraries
 from config.config import system
-#- from python.adjustThermostat import start_fan_controller
+from web.flask_app import app
 from python.args import get_args
-#- from python.camera_controller import start_camera_controller
-#- from python.light_controller import start_light_controller
-#- from python.logSensors import start_sensor_data_logger
 from python.repl import repl
-#- from python.web_chart_controller import start_web_chart_controller
 
 # Process the command line args
 args = get_args()
 
-logger.info('############## fopd device id: {}'.format(system['device_id']))
+logger.info('fopd device id: {}'.format(system['device_id']))
 
 s = {'name': system['name']}
 app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent}
@@ -80,12 +80,19 @@ for r in system['resources']:
 
     tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
+# start a thread for the repl (if it is enabled)
+if not args.silent:
+    tl.append(threading.Thread(target=repl, name='repl', args=(app_state,)))
+
 # Start all threads
 for t in tl:
     t.start()
+    
+# Start the Flask application
+#
+app.run(host='0.0.0.0')
 
-if not args.silent:
-    repl(app_state)
+app_state['stop'] = True
 
 # Wait for threads to complete.
 #

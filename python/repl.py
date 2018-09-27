@@ -119,3 +119,5 @@ def repl(app_state):
         cmd = input(device_name + ': ')
 
         print(app_state['sys']['cmd'](cmd))
+
+    logger.info('command line interface exiting')

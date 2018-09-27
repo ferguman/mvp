@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body {font-family: "Lato", sans-serif;}
+
+/* Style the tab */
+div.tab {
+   overflow: hidden;
+   border: 1px solid #ccc;
+   background-color: #f1f1f1;
+}
+/* Style the buttons inside the tab */
+div.tab button {
+    background-color: inherit;
+    float: left;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    font-size: 17px;
+}
+
+/* Change background color of buttons on hover */
+div.tab button:hover {
+    background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+div.tab button.active {
+    background-color: #ccc;
+}
+/* Style the tab content */
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+}
+</style>
+<head>
+<title>Grow Device Dashboard</title>
+<meta http-equiv="refresh" content="3600">
+</head>
+<body>
+	
+<! top level Vue instance !>
+<div id="image">
+
+<div class="tab">
+  <button class="tablinks" onclick="openTab(event, 'Charts')">Charts</button>
+  <button class="tablinks" v-on:click="open_image_tab">Camera</button>
+  <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
+  <button class="tablinks" onclick="openTab(event, 'Real Time')">Real Time</button>
+  <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
+  <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
+  <button class="tablinks" onclick="openTab(event, 'About')">About</button>
+</div>
+
+<div id="Charts" class="tabcontent">
+  <h3>Charts</h3>
+    Look for the chart list in the MMAP area. If it is not there than display last list 
+</div>
+
+<div id="Camera" class="tabcontent">
+  <h3>Camera</h3>
+    <p>
+    <span v-bind:title="message">
+	    <img v-bind:src="image" alt="Latest image" style="width:640px;height:480px;">
+	    <button v-on:click="update_image">update</button>
+    </span>
+     </p>
+</div>
+
+<div id="Config" class="tabcontent">
+  <h3>Config</h3>
+    <p>Show status of fopd device</p>
+</div>
+
+<div id="About" class="tabcontent">
+<h3>About</h3>
+<p>The MVP (Minimal Viable Product) is a low cost, hydroponic growth chamber; designed as a simplified version of the <a target="_blank" href="https://www.media.mit.edu/groups/open-agriculture-openag/overview">MIT OpenAg Personal Food Computer</a>.  While this is a working hydroponic environment, the focus in on collecting research data.  This is an open source project based around a Raspberry Pi 'brain' and Python code, with a CouchDB repository.</p>
+<p>Documentation is on the <a target="_blank" href="https://wiki.openag.media.mit.edu/mvp_1">MIT OpenAg Wiki</a></p>
+<p>Discussion is on the <a target="_blank" href="http://forum.openag.media.mit.edu">MIT OpenAg Forum</a></p>
+<p>Code is sourced on <a target="_blank" href="https://github.com/webbhm">Github</a></p>
+<p/>
+<h3>Release Version</h3>
+<p>Blossom</p>
+<h3>A special thanks to the early testers of the MVP</h3>
+   <ul>
+   <li>Melanie Shimano</li>
+   <li>Phil Speth</li>
+   <li>Drew Thomas</li>
+   <li>Peter Webb</li>
+   </ul>
+</div>
+
+<! end of Vue application !>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+var app = new Vue({
+    el: '#image',
+    data: { 
+        message: 'You loaded this image on ' + new Date().toLocaleString(),
+	image: "(( url_for('static', filename='image.jpg') ))"
+    },
+    methods: {
+        update_image: function() {
+            this.image = "/static/image.jpg?" + new Date().getTime();
+	},
+        open_image_tab: function() {
+	    openTab(event, 'Camera');
+	    this.update_image();
+        }
+    }
+})
+</script>
+
+<script>
+function openTab(evt, tabName) {
+
+    var i, tabcontent, tablinks;
+    
+    tabcontent = document.getElementsByClassName("tabcontent");
+
+    for (i = 0; i < tabcontent.length; i++) {
+        tabcontent[i].style.display = "none";
+    }
+
+    tablinks = document.getElementsByClassName("tablinks");
+
+    for (i = 0; i < tablinks.length; i++) {
+        tablinks[i].className = tablinks[i].className.replace(" active", "");
+    }
+
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+</script>
+	     
+</body>
+</html> 
