@@ -54,7 +54,7 @@ import threading
 
 # Load mvp libraries
 from config.config import system
-from web.flask_app import app
+from web.flask_app import run_flask 
 from python.args import get_args
 from python.repl import repl
 
@@ -63,8 +63,11 @@ args = get_args()
 
 logger.info('fopd device id: {}'.format(system['device_id']))
 
+# TODO: I think we can take cmds out. 
+# Some threads such as repl and web chart generator expose functions on 'sys', so
+# add the 'sys' key for them to tack stuff onto. 
 s = {'name': system['name']}
-app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent}
+app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent, 'sys':{}}
 
 # create a Barrier that all the threads can syncronize on. This is to
 # allow threads such as mqtt or data loggers to get initialized before
@@ -90,7 +93,8 @@ for t in tl:
     
 # Start the Flask application
 #
-app.run(host='0.0.0.0')
+# app.run(host='0.0.0.0')
+run_flask(app_state)
 
 app_state['stop'] = True
 

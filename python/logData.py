@@ -59,6 +59,7 @@ def logDB(r, comment=''):
                   'status' :    'Success',
                   'attribute' : r['attribute'],
                   'value' :     r['value'],
+                  'units' :     r['units'],
                   'comment' :   comment}
 
     logger.info('couchd db write: {}, {}, {}, {}, {}'.format(log_record['name'], 

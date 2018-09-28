@@ -101,7 +101,7 @@ def repl(app_state):
     global run_cmd
     run_cmd  = make_run_cmd(repl_globals, app_state) 
 
-    app_state['sys'] = {}
+    #- app_state['sys'] = {}
     app_state['sys']['help'] = help
     app_state['sys']['exit'] = make_exit_mvp(app_state)
     app_state['sys']['dir'] = sys_dir 

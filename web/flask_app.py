@@ -16,9 +16,18 @@ class fopdwFlask(Flask):
 app = fopdwFlask(__name__)
 app.logger.info('starting Flask version {}'.format(__version__))
 
+app_state = None
+
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('home.html', chart_list=app_state['sys']['chart_list'])
 
-#- app.run() does not return.
-#- app.run(host='0.0.0.0')
+def run_flask(state):
+
+    # take up the app_state from the caller
+    global app_state
+    app_state = state 
+
+    # run Flask.  Note: this function does not return.
+    # TODO: Figure out how to gracefully shut down Flask
+    app.run(host='0.0.0.0')

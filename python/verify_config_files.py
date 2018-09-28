@@ -42,6 +42,7 @@ def verify_config_file():
                     exc_info()[0], exc_info()[1]))
        exit()
 
+"""-
 def verify_web_config_file():
 
       try:
@@ -58,3 +59,4 @@ def verify_web_config_file():
          print('Could not verify web configuration file: {}, {} exiting ...'.format(\
                exc_info()[0], exc_info()[1]))
          exit()
+"""

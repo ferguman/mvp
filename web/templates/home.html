@@ -44,12 +44,14 @@ div.tab button.active {
 <meta http-equiv="refresh" content="3600">
 </head>
 <body>
-	
+<! TODO: research adding a tag that tells the browser not to cache stuff. Since you are using the ?ts trick 
+         to get around browser caching you might as well tell the browser not to cache so it doesn't waste memory saving 
+         content that will never be fetched from the cache. !>
 <! top level Vue instance !>
-<div id="image">
+<div id="fopdw">
 
 <div class="tab">
-  <button class="tablinks" onclick="openTab(event, 'Charts')">Charts</button>
+  <button class="tablinks" v-on:click="open_charts_tab">Charts</button>
   <button class="tablinks" v-on:click="open_image_tab">Camera</button>
   <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
   <button class="tablinks" onclick="openTab(event, 'Real Time')">Real Time</button>
@@ -60,7 +62,13 @@ div.tab button.active {
 
 <div id="Charts" class="tabcontent">
   <h3>Charts</h3>
-    Look for the chart list in the MMAP area. If it is not there than display last list 
+  (% for chart in chart_list: %)
+      <object type="image/svg+xml" v-bind:data="(( chart['vue_name'] ))">
+          "Your browser does not support SVG
+      </object>
+  (% endfor %)
+      <button v-on:click="update_charts">update</button>
+      
 </div>
 
 <div id="Camera" class="tabcontent">
@@ -103,18 +111,30 @@ div.tab button.active {
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script>
 var app = new Vue({
-    el: '#image',
+    el: '#fopdw',
     data: { 
         message: 'You loaded this image on ' + new Date().toLocaleString(),
-	image: "(( url_for('static', filename='image.jpg') ))"
+	image: "(( url_for('static', filename='image.jpg') ))",
+(% for chart in chart_list: %)
+	(( chart['vue_name'] )): "(( url_for('static', filename = chart['chart_file_name']) ))",
+(% endfor %)
     },
     methods: {
         update_image: function() {
             this.image = "/static/image.jpg?" + new Date().getTime();
 	},
+        update_charts: function() {
+(% for chart in chart_list: %)
+            this.((chart['vue_name'])) = "(( url_for('static', filename = chart['chart_file_name']) ))?" + new Date().getTime();
+(% endfor %)
+	},
         open_image_tab: function() {
 	    openTab(event, 'Camera');
 	    this.update_image();
+        },
+        open_charts_tab: function() {
+	    openTab(event, 'Charts');
+	    this.update_charts();
         }
     }
 })

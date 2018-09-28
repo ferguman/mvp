@@ -9,12 +9,18 @@ from python.logger import get_sub_logger
 
 logger = get_sub_logger(__name__)
 
-def start_web_chart_controller(app_state):
+def start(app_state, args, b):
 
    logger.info('starting web chart generator controller')
+   logger.setLevel(args['log_level'])
+
+   app_state['sys']['chart_list'] = args['chart_list']
 
    # Set the intial timestamp to 0 thus forcing a web chart generation at start up.
    state = {'last_charting_ts':0, 'last_chart_generation_date':None}
+
+   # Let the system know that you are good to go.
+   b.wait()
 
    while not app_state['stop']:
 
@@ -29,9 +35,11 @@ def start_web_chart_controller(app_state):
 
          try:
 
-            for chart_info in chart_list:
+            #- for chart_info in chart_list:
+            for chart_info in args['chart_list']:
 
-               generate_chart(couchdb_location_url, chart_info)
+               #- generate_chart(couchdb_location_url, chart_info, app_state)
+               generate_chart(args['couchdb_location_url'], chart_info, logger)
 
             state['last_charting_ts'] = this_ts
             state['last_chart_generation_date'] = datetime.now()
@@ -42,3 +50,5 @@ def start_web_chart_controller(app_state):
             logger.error('render.sh call failed with the following results:{}'.format(charting_results))
 
       sleep(1)
+
+   logger.info('shutting down chart generator')
