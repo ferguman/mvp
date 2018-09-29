@@ -3,7 +3,6 @@ from subprocess import check_call, CalledProcessError
 from sys import path
 from time import sleep, time
 
-from config.config import charting_interval, couchdb_location_url, chart_list
 from python.generate_chart import generate_chart
 from python.logger import get_sub_logger 
 
@@ -26,7 +25,8 @@ def start(app_state, args, b):
 
       this_ts = time()
 
-      if (this_ts - state['last_charting_ts'])/60 > charting_interval:
+      #- if (this_ts - state['last_charting_ts'])/60 > charting_interval:
+      if (this_ts - state['last_charting_ts'])/60 > args['charting_interval']:
 
          # Generate the charts
          # Figure out how the script directory is getting put in the path. Or in other words

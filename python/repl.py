@@ -1,4 +1,4 @@
-# Evaluate Python Fire https://github.com/google/python-fire.  It generates CLI's for
+# TODO: Evaluate Python Fire https://github.com/google/python-fire.  It generates CLI's for
 # Python objects.
 #
 
@@ -72,6 +72,16 @@ def trans_cmd(match):
 def trans_cmds(input_str):
 
     global cmd_re
+
+    # Python docs for re.sub(func, str): Return the string obtained by replacing the leftmost non-overlapping 
+    # occurrences of the regex pattern in str by the values obtained by apply func to the regex match strings.
+    #
+    # 1st -> start with a string like:  abc.def.ghi(stuff)
+    # 2nd -> find the part up to the paranthesis, eg. abc.def.ghi(
+    # 3rd -> replace the first sub-part (e.g. abc.) with everything but the dot (e.g. abc)
+    # 4th -> replace the other sub parts (e.g. def. or ghi() with ['sub-part'] (e.g. ['def'] or ['ghi']
+    # 5th -> add the parentheses back in (e.g. abc['def']['ghi']( )
+    # 6th -> return the modified string (e.g. abc['def']['ghi'](stuff) )
     return cmd_re.sub(trans_cmd, input_str)
 
 def make_run_cmd(repl_globals, app_state):
@@ -82,11 +92,11 @@ def make_run_cmd(repl_globals, app_state):
         cmd_lock.acquire()
         
         try:
-            # debug print -> print(trans_cmds(cmd))
+            print(trans_cmds(cmd) + '\n')
             return eval(trans_cmds(cmd), repl_globals, app_state)
         except:
-            return 'command error. enter sys.help() for help'
             logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
+            return 'command error. enter sys.help() for help'
         finally:
             cmd_lock.release()
 

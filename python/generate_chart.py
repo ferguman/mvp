@@ -58,11 +58,12 @@ def generate_chart(couchdb_url, chart_info, logger):
     # print(r)
 
     try:
+        # TODO: Figure out why we need to reverse the list.  
         global enable_display_unit_error_msg
         enable_display_unit_error_msg = True
         #- v_lst = [float(x['value']['value']) for x in r.json()['rows']]
         v_lst = [float(apply_unit_conversion(x, chart_info)) for x in r.json()['rows']]
-        v_lst.reverse()
+        #- v_lst.reverse()
         ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p') for x in r.json()['rows']]
         ts_lst.reverse()
 
