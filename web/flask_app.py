@@ -16,6 +16,8 @@ class fopdwFlask(Flask):
 app = fopdwFlask(__name__)
 app.logger.info('starting Flask version {}'.format(__version__))
 
+# TODO: I don't see the need for keeping a local reference to app_state. See
+#       if you can remove this stuff.
 app_state = None
 
 @app.route('/')
@@ -27,6 +29,8 @@ def run_flask(state):
     # take up the app_state from the caller
     global app_state
     app_state = state 
+
+    state['sys']['flask_app'] = app
 
     # run Flask.  Note: this function does not return.
     # TODO: Figure out how to gracefully shut down Flask

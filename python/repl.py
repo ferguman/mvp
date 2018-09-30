@@ -82,6 +82,7 @@ def trans_cmds(input_str):
     # 4th -> replace the other sub parts (e.g. def. or ghi() with ['sub-part'] (e.g. ['def'] or ['ghi']
     # 5th -> add the parentheses back in (e.g. abc['def']['ghi']( )
     # 6th -> return the modified string (e.g. abc['def']['ghi'](stuff) )
+    #
     return cmd_re.sub(trans_cmd, input_str)
 
 def make_run_cmd(repl_globals, app_state):
@@ -92,7 +93,17 @@ def make_run_cmd(repl_globals, app_state):
         cmd_lock.acquire()
         
         try:
-            print(trans_cmds(cmd) + '\n')
+            #- print(trans_cmds(cmd) + '\n')
+            logger.info('will evaluate {}'.format(trans_cmds(cmd)))
+            # eval(exp, globals, locals) -> The exp argument is parsed and evaluated as a Python expression 
+            # (technically speaking, a condition list) using the globals and locals dictionaries as global
+            # and local namespace.
+            # Note that Python appears to parse the cmd string.  For example one can enter sys['help']() and 
+            # the Python interpretter will successfully find the app_state['sys']['help'] object which is a
+            # function and then will run the function with an empty argument list. My point is that Python
+            # is parsing the input to isolate 'sys' as a symbol that is to be interpretted as a dictionary
+            # key to be found in either globals or locals.
+            #
             return eval(trans_cmds(cmd), repl_globals, app_state)
         except:
             logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
@@ -101,6 +112,24 @@ def make_run_cmd(repl_globals, app_state):
             cmd_lock.release()
 
     return run_cmd
+
+from flask import request
+# TODO: See flask.pocoo.org/snippets/67/ and flask.pocoo.org/docs/1.0/reqcontext.
+#       As of 9/30 this code returns No shutdown function found. The docs say this
+#       reset stuff only works on the development server. I think my testing was done
+#       in producton mode. Need to retest in development mode.
+#
+def make_shut_down_werkzeug(app_state):
+
+    def shut_down_werkzeug():
+        with app_state['sys']['flask_app'].test_request_context('/bogus'):
+            func = request.environ.get('werkzeug.server.shutdown')
+            if func is None:
+                return 'No shutdown function found'
+            else:
+                return 'found a shutdown function'
+
+    return shut_down_werkzeug
 
 def repl(app_state):
 
@@ -116,6 +145,7 @@ def repl(app_state):
     app_state['sys']['exit'] = make_exit_mvp(app_state)
     app_state['sys']['dir'] = sys_dir 
     app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
+    app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
 
     # TBD - considering adding a command: sys.inject(r[resource_name], 'start':'stop')
     #       when in inject mode the system would pass the user input directory to resource 

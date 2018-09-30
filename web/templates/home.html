@@ -54,7 +54,7 @@ div.tab button.active {
   <button class="tablinks" v-on:click="open_charts_tab">Charts</button>
   <button class="tablinks" v-on:click="open_image_tab">Camera</button>
   <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
-  <button class="tablinks" onclick="openTab(event, 'Real Time')">Real Time</button>
+  <button class="tablinks" v-on:click="open_real_time_tab">Real Time</button>
   <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
   <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
   <button class="tablinks" onclick="openTab(event, 'About')">About</button>
@@ -78,6 +78,13 @@ div.tab button.active {
 	    <img v-bind:src="image" alt="Latest image" style="width:640px;height:480px;">
 	    <button v-on:click="update_image">update</button>
     </span>
+     </p>
+</div>
+
+<div id="RealTime" class="tabcontent">
+  <h3>Farm Device</h3>
+    <p>
+	    <button v-on:click="update_real_time">update</button>
      </p>
 </div>
 
@@ -128,6 +135,9 @@ var app = new Vue({
             this.((chart['vue_name'])) = "(( url_for('static', filename = chart['chart_file_name']) ))?" + new Date().getTime();
 (% endfor %)
 	},
+	update_real_time: function() {
+
+	},
         open_image_tab: function() {
 	    openTab(event, 'Camera');
 	    this.update_image();
@@ -135,6 +145,10 @@ var app = new Vue({
         open_charts_tab: function() {
 	    openTab(event, 'Charts');
 	    this.update_charts();
+        },
+        open_real_time_tab: function() {
+	    openTab(event, 'RealTime');
+	    this.update_real_time();
         }
     }
 })

@@ -91,9 +91,12 @@ if not args.silent:
 for t in tl:
     t.start()
     
+# TODO: Consider running the CherryPy web server (instead of the Werkzeug server) as
+#       the front end to Flask. If CherryPy can run as a seperate thread then this
+#       main thread could stop the server. See flask.pocoo.org/snippets/24/ for further
+#       details.
 # Start the Flask application
 #
-# app.run(host='0.0.0.0')
 run_flask(app_state)
 
 app_state['stop'] = True
