@@ -38,6 +38,46 @@ div.tab button.active {
     border: 1px solid #ccc;
     border-top: none;
 }
+
+<! Sytle for slider button !>
+
+#toggle {
+  opacity: 0;
+  visibility: hidden;
+}
+
+#toggle_label {
+  display: inline-block;
+  background: #ff0000;
+  width: 2em;
+  height: 1em;
+  border-radius: 0.5em;
+  position: relative;
+  cursor: pointer;
+}
+
+#switch {
+ position: inline-block;
+ width: 0.9em;
+ height: 0.9em;
+ margin-top: 0.05em;
+ margin-left: 0.05em;
+ border-radius: 1em;
+ background: #0000ff;
+ box-shadow: 5px 0px 28px -9px rgba(0, 0, 0, 0.75);
+ transition: transform .2s ease-in;
+}
+
+/* select elements with id switch but only if they follow an element with id toggle_label
+   and an element with id toggle that is checked */
+#toggle:checked ~ #toggle_label #switch {
+ background: #00ff00;
+ transform: translatex(1em);
+ transition: transform .2s ease-in;
+}
+
+<! end of style for slider switch !>
+
 </style>
 <head>
 <title>Grow Device Dashboard</title>
@@ -54,7 +94,7 @@ div.tab button.active {
   <button class="tablinks" v-on:click="open_charts_tab">Charts</button>
   <button class="tablinks" v-on:click="open_image_tab">Camera</button>
   <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
-  <button class="tablinks" v-on:click="open_real_time_tab">Real Time</button>
+  <button class="tablinks" onclick="openTab(event, 'RealTime')">Real Time</button>
   <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
   <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
   <button class="tablinks" onclick="openTab(event, 'About')">About</button>
@@ -82,10 +122,11 @@ div.tab button.active {
 </div>
 
 <div id="RealTime" class="tabcontent">
+
   <h3>Farm Device</h3>
-    <p>
-	    <button v-on:click="update_real_time">update</button>
-     </p>
+	    <input id="toggle" type="checkbox">
+            <label id="toggle_label" for="toggle">
+	    <div id="switch"></div></label>
 </div>
 
 <div id="Config" class="tabcontent">
@@ -114,11 +155,12 @@ div.tab button.active {
 <! end of Vue application !>
 </div>
 
-
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
 <script>
 var app = new Vue({
     el: '#fopdw',
+    /* data is to contain the properties to be added to the reactivity sytem.  Changes to these
+       values will trigger the Vue system to re-render the UI to incorporate the new values. */
     data: { 
         message: 'You loaded this image on ' + new Date().toLocaleString(),
 	image: "(( url_for('static', filename='image.jpg') ))",
@@ -158,20 +200,30 @@ var app = new Vue({
 function openTab(evt, tabName) {
 
     var i, tabcontent, tablinks;
-    
+    /* get all the descendant elements of the elements with class name "tabcontent" -> in other
+       words get all the elements on all the tabs */
     tabcontent = document.getElementsByClassName("tabcontent");
 
+    /* hide all the elements on all the tabs */
     for (i = 0; i < tabcontent.length; i++) {
-        tabcontent[i].style.display = "none";
+        
     }
 
+    /* get all the horizontal menu tab link elements. */ 
     tablinks = document.getElementsByClassName("tablinks");
 
+    /* find the current button in the horizontal bar with class name active and 
+       and set the class name to none. */ 
     for (i = 0; i < tablinks.length; i++) {
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
 
+    /* set the display to block (as in a block of stuff) for all the elements that are 
+       descendents of the tab that the user has clicked */
     document.getElementById(tabName).style.display = "block";
+    
+    /* set the class for the horizontal button thas just clicked so that it's color will
+       change. */
     evt.currentTarget.className += " active";
 }
 </script>
