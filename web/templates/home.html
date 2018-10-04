@@ -39,45 +39,6 @@ div.tab button.active {
     border-top: none;
 }
 
-<! Sytle for slider button !>
-
-#toggle {
-  opacity: 0;
-  visibility: hidden;
-}
-
-#toggle_label {
-  display: inline-block;
-  background: #ff0000;
-  width: 2em;
-  height: 1em;
-  border-radius: 0.5em;
-  position: relative;
-  cursor: pointer;
-}
-
-#switch {
- position: inline-block;
- width: 0.9em;
- height: 0.9em;
- margin-top: 0.05em;
- margin-left: 0.05em;
- border-radius: 1em;
- background: #0000ff;
- box-shadow: 5px 0px 28px -9px rgba(0, 0, 0, 0.75);
- transition: transform .2s ease-in;
-}
-
-/* select elements with id switch but only if they follow an element with id toggle_label
-   and an element with id toggle that is checked */
-#toggle:checked ~ #toggle_label #switch {
- background: #00ff00;
- transform: translatex(1em);
- transition: transform .2s ease-in;
-}
-
-<! end of style for slider switch !>
-
 </style>
 <head>
 <title>Grow Device Dashboard</title>
@@ -94,7 +55,7 @@ div.tab button.active {
   <button class="tablinks" v-on:click="open_charts_tab">Charts</button>
   <button class="tablinks" v-on:click="open_image_tab">Camera</button>
   <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
-  <button class="tablinks" onclick="openTab(event, 'RealTime')">Real Time</button>
+  <button class="tablinks" v-on:click="open_status_tab">Status</button>
   <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
   <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
   <button class="tablinks" onclick="openTab(event, 'About')">About</button>
@@ -121,12 +82,10 @@ div.tab button.active {
      </p>
 </div>
 
-<div id="RealTime" class="tabcontent">
-
-  <h3>Farm Device</h3>
-	    <input id="toggle" type="checkbox">
-            <label id="toggle_label" for="toggle">
-	    <div id="switch"></div></label>
+<div id="Status" class="tabcontent">
+    <h3>Farm Device</h3>
+    <label>Grow Light</label><input id="toggle" type="checkbox">
+    <p><label>Air Temp.</label>Not Available
 </div>
 
 <div id="Config" class="tabcontent">
@@ -177,8 +136,8 @@ var app = new Vue({
             this.((chart['vue_name'])) = "(( url_for('static', filename = chart['chart_file_name']) ))?" + new Date().getTime();
 (% endfor %)
 	},
-	update_real_time: function() {
-
+	update_status: function() {
+	    
 	},
         open_image_tab: function() {
 	    openTab(event, 'Camera');
@@ -188,28 +147,26 @@ var app = new Vue({
 	    openTab(event, 'Charts');
 	    this.update_charts();
         },
-        open_real_time_tab: function() {
-	    openTab(event, 'RealTime');
-	    this.update_real_time();
+        open_status_tab: function() {
+	    openTab(event, 'Status');
+	    this.update_status();
         }
     }
 })
-</script>
 
-<script>
 function openTab(evt, tabName) {
 
     var i, tabcontent, tablinks;
     /* get all the descendant elements of the elements with class name "tabcontent" -> in other
-       words get all the elements on all the tabs */
+       words get all the elements in each of the tab content areas */
     tabcontent = document.getElementsByClassName("tabcontent");
 
-    /* hide all the elements on all the tabs */
+    /* hide all the elements on all the tabs areas */
     for (i = 0; i < tabcontent.length; i++) {
-        
+        tabcontent[i].style.display = "none";
     }
 
-    /* get all the horizontal menu tab link elements. */ 
+    /* get all the horizontal menu tab link button elements */ 
     tablinks = document.getElementsByClassName("tablinks");
 
     /* find the current button in the horizontal bar with class name active and 
@@ -218,12 +175,12 @@ function openTab(evt, tabName) {
         tablinks[i].className = tablinks[i].className.replace(" active", "");
     }
 
-    /* set the display to block (as in a block of stuff) for all the elements that are 
+    /* set the CSS display property to block (as in a block of stuff) for all the elements that are 
        descendents of the tab that the user has clicked */
     document.getElementById(tabName).style.display = "block";
     
-    /* set the class for the horizontal button thas just clicked so that it's color will
-       change. */
+    /* set the class for the horizontal button that was just clicked so that it's color will change.
+       as per the active class style */
     evt.currentTarget.className += " active";
 }
 </script>

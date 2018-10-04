@@ -95,6 +95,7 @@ def make_run_cmd(repl_globals, app_state):
         try:
             #- print(trans_cmds(cmd) + '\n')
             logger.info('will evaluate {}'.format(trans_cmds(cmd)))
+            
             # eval(exp, globals, locals) -> The exp argument is parsed and evaluated as a Python expression 
             # (technically speaking, a condition list) using the globals and locals dictionaries as global
             # and local namespace.

@@ -529,7 +529,7 @@ def start(app_state, args, barrier):
 
                update_climate_state(args['min_log_period'], app_state['mc'])
 
-               # TBD - need to make 'mc' configurable from config file.
+               # TODO - need to make 'mc' configurable from config file.
                check_lights(app_state['mc'])
 
                check_vent_fan(app_state['mc'])

@@ -81,9 +81,46 @@ old_mc_cmd_str = None
 cur_mc_response = None
 old_mc_response = None
 
-# Create a binary string of the form: b'0,1, .... \n'
-def make_fc_cmd():
+# Create a command string for the Arduino -> b'0,false,true,...false\n'
+def make_fc_cmd(mc_state):
 
+    # first build an array that holds all the arduino commands 
+    cmds = []
+
+    # scan the cur_command bits
+    for v in cur_command:
+        if v == 0:
+            cmds.append(False)
+        elif v == 1:
+            cmds.append(True)
+        else:
+           logger.error('bad command value: {}'.format(b))
+           # dump and run. this is bad!
+           return b'0'
+    
+    # if the system is in camera pose mode then override the light commands
+    # in order to give good lighting for the camera.
+    if mc_state['camera_pose']:
+        cmds[target_indexes['grow_light']] = False
+        cmds[target_indexes['chamber_lights']] = True
+
+    # walk the command array and build the arduino command
+    #
+    cmd = b'0'
+    
+    for b in cmds:
+        if b == False:
+            cmd = cmd + b',false'
+        elif b == True:
+            cmd = cmd + b',true'
+        else:
+           logger.error('bad command boolean: {}'.format(b))
+           # dump and run. this is bad!
+           return b'0'
+
+    return cmd + b'\n'
+
+    """
     global cur_command
 
     cmd = b'0'
@@ -98,6 +135,7 @@ def make_fc_cmd():
            return b'0'
 
     return cmd + b'\n'
+    """
 
 
 def extract_sensor_values(mc_response, vals):
@@ -144,21 +182,22 @@ def make_help(args):
 
         prefix = args['name']
 
-        s =     '{}.help()                    - Displays this help page.\n'.format(prefix)
-        s = s + "{}.cmd('on':'off', target)   - Turn an actuator on or off. Targets:\n".format(prefix)
-        s = s + "                               Run {}.cmd('st') to see the possible values for the target argument\n".format(prefix)
-        s = s + "{}.cmd('show_targets'|'st')  - Show all the available target values\n".format(prefix)
-        s = s + '{}.get(value_name)           - Get value such as air temperature.\n'.format(prefix)
-        s = s + '                               The following value names are recognized:\n'
-        s = s + '                               humidity, air_temp, TBD add other available options to this help message.\n'
-        #- s = s + "{}.grow_light('on'|'off')    - Turns the grow light on or off.\n".format(prefix)
-        s = s + "{0}.mc_cmd(mc_cmd_str)        - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
-        s = s + "                               mc_cmd_str is specified as a string -> {0}.mc_cmd(\"(help)\") or {0}.mc_cmd('(help)')\n".format(prefix)
-        s = s + "                               Embed quotes (\") by using the \ character -> {0}.mc_cmd(\"(c 'co2 'ser ".format(prefix) + r'\"Z\")")' + '\n'
-        s = s + '{}.state()                   - Show sensor readings and actuator state.\n'.format(prefix)
-        s = s + "{}['sensor_readings'][index] - Returns the sensor reading referenced by index.\n".format(prefix)
-        s = s + "                               0: air humidity\n"
-        s = s + "                               1: air temperature\n"
+        s =     '{}.help()                            - Displays this help page.\n'.format(prefix)
+        s = s + "{}.cmd('camera_pose' | 'cp', action) - if action = 'on' then Actuate the grow chamber lights for a picture,\n".format(prefix)
+        s = s + "                                     - if action = 'off' then return the grow lights to the current state\n"
+        s = s + "{}.cmd('on':'off', target)           - Turn an actuator on or off. Targets:\n".format(prefix)
+        s = s + "                                       Run {}.cmd('st') to see the possible values for the target argument\n".format(prefix)
+        s = s + "{}.cmd('show_targets'|'st')          - Show all the available target values\n".format(prefix)
+        s = s + '{}.get(value_name)                   - Get value such as air temperature.\n'.format(prefix)
+        s = s + '                                       The following value names are recognized:\n'
+        s = s + '                                       humidity, air_temp, TBD add other available options to this help message.\n'
+        s = s + "{0}.mc_cmd(mc_cmd_str)               - Micro-controller command.  Try {0}.uc_cmd('(help)') to get started.\n".format(prefix)
+        s = s + "                                       mc_cmd_str is specified as a string -> {0}.mc_cmd(\"(help)\") or {0}.mc_cmd('(help)')\n".format(prefix)
+        s = s + "                                       Embed quotes (\") by using the \ character -> {0}.mc_cmd(\"(c 'co2 'ser ".format(prefix) + r'\"Z\")")' + '\n'
+        s = s + '{}.state()                           - Show sensor readings and actuator state.\n'.format(prefix)
+        s = s + "{}['sensor_readings'][index]         - Returns the sensor reading referenced by index.\n".format(prefix)
+        s = s + "                                       0: air humidity\n"
+        s = s + "                                       1: air temperature\n"
         
         return s
 
@@ -168,52 +207,69 @@ def get(value_name):
 
     return 'OK'
 
-#- def cmd(cmd, target): 
-def cmd(*args): 
+def make_cmd(mc_state, ser):
 
-    cmd= args[0]
+    def cmd(*args): 
 
-    # is this a show_target command
-    if cmd == 'show_targets' or cmd == 'st':
-        s  = None
-        for t in target_indexes:
-            if s == None:
-                s = t
+        cmd= args[0]
+
+        # is this a show_target command
+        if cmd == 'show_targets' or cmd == 'st':
+            s  = None
+            for t in target_indexes:
+                if s == None:
+                    s = t
+                else:
+                    s = s + ', ' + t
+            return s
+
+        # is this an on or off command?
+        elif cmd == 'on' or cmd == 'off':
+
+            target = args[1]
+
+            if target in target_indexes:
+
+                target_index = target_indexes[target]
+                global cur_command
+
+                if cmd == 'on':
+                    if cur_command[target_index] == 0:
+                        logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
+                    cur_command[target_index] = 1
+                    return 'OK'
+                elif cmd == 'off':
+                    if cur_command[target_index] == 1:
+                        logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
+                    cur_command[target_index] = 0
+                    return 'OK'
             else:
-                s = s + ', ' + t
-        return s
+                logger.error('Unknown on/off command action received: {}'.format(target))
+                return 'unknown target.'
 
-    # is this an on or off command?
-    if cmd == 'on' or cmd == 'off':
+        # is this an on or off command?
+        elif cmd == 'camera_pose' or cmd == 'cp':
 
-        target = args[1]
+            if args[1] == 'on':
+                mc_state['camera_pose'] = True 
 
-        if target in target_indexes:
+                # send a command to the arduino now so the lights go into pose mode ASAP
+                send_mc_cmd(ser, make_fc_cmd(mc_state))
 
-            target_index = target_indexes[target]
-            global cur_command
-
-            if cmd == 'on':
-                if cur_command[target_index] == 0:
-                    logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
-                cur_command[target_index] = 1
+                logger.info('posing for a picture')
                 return 'OK'
-            elif cmd == 'off':
-                if cur_command[target_index] == 1:
-                    logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
-                cur_command[target_index] = 0
+            elif args[1] == 'off':
+                mc_state['camera_pose'] = None
+                logger.info('will stop posing for a picture')
                 return 'OK'
-            """
             else:
-                logger.error('unknown command received: {}'.format(cmd))
-                return "unknown cmd. Specify 'on' or 'off'"
-            """
-        else:
-            logger.error('Unknown command target received: {}'.format(target))
-            return 'unknown target.'
+                logger.error('Unknown pose command action {}'.format(args[1]))
+                return 'Unknown pose command action {}'.format(args[1])
 
-    logger.error('unknown command received: {}'.format(cmd))
-    return "unknown cmd. Specify 'on' or 'off'"
+        logger.error('unknown command received: {}'.format(cmd))
+        return "unknown cmd. Specify 'on' or 'off'"
+
+    return cmd
 
 def make_mc_cmd(ser):
 
@@ -305,17 +361,38 @@ def tokenize_mc_response(mc_response):
 # Lastly the string "OK\r\n" is returned to mark the end of the micro-controller's response
 # to the command.
 #
-def send_mc_cmd(ser, c):
+def send_mc_cmd(ser, cmd_str):
+
+    """
+    # Update current state - So logger routines can intelligently log changes
+    global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
+    old_mc_cmd_str = cur_mc_cmd_str
+    cur_mc_cmd_str = make_fc_cmd(mc_state)
+    old_mc_response = cur_mc_response
+    
+    # Send the current command to the fc.
+    cur_mc_response = send_mc_cmd(ser, cur_mc_cmd_str)
+    """
 
     serial_interface_lock.acquire()
+
+    # Update current state - So logger routines can intelligently log changes
+    global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
+    old_mc_cmd_str = cur_mc_cmd_str
+    cur_mc_cmd_str = cmd_str 
+    old_mc_response = cur_mc_response
+    
     try:
-        ser.write(c)
+        ser.write(cmd_str)
         mc_response = ser.read_until(b'OK\r\n')
         ser.reset_input_buffer()
     finally:
         serial_interface_lock.release()
 
-    return tokenize_mc_response(mc_response)
+    cur_mc_response = tokenize_mc_response(mc_response)
+    log_cmd_changes()
+    
+    return cur_mc_response 
 
 
 # TBD: check on the fc and see if it is ok
@@ -340,7 +417,7 @@ def start_serial_connection(args):
 
     return ser
 
-def initialize_fc(ser, vals, iterations):
+def initialize_fc(mc_state, ser, vals, iterations):
 
     # Turn the food computer micro-controller loop on
     logger.info("asking the food computer if it is on.")
@@ -351,7 +428,7 @@ def initialize_fc(ser, vals, iterations):
    
     # Ping the mc twice so that it does two update loops
     for i in range(0, iterations):
-       log_mc_response(send_mc_cmd(ser, make_fc_cmd()))
+       log_mc_response(send_mc_cmd(ser, make_fc_cmd(mc_state)))
        sleep(1)
 
 
@@ -362,44 +439,53 @@ def start(app_state, args, b):
     # Start a serial connection with the Aruduino - Note that this resets the Arduino.
     ser = start_serial_connection(args)
 
+    # We have one state variable so no need of a state structure
+    mc_state = {}
+    mc_state['camera_pose'] = None
+
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    app_state[args['name']]['cmd'] = cmd
+    app_state[args['name']]['cmd'] = make_cmd(mc_state, ser)
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    
     vals = app_state[args['name']]['sensor_readings'] = create_sensor_reading_dict(args)
-    app_state[args['name']]['get'] = make_get(vals) 
+    app_state[args['name']]['get'] = make_get(vals)
 
     # Start the fc loop and and let it run for n seconds where n = args['mc_start_delay'].
     # 10 is recommened for the fc version 1 in order to wait for the
-    # co2 reading to be accurate.  TBD: There more sophisticated ways - such as making the co2
+    # co2 reading to be accurate.  TBD: There are more sophisticated ways - such as making the co2
     # reading "unavailible" until it is available.
-    initialize_fc(ser, vals, args['mc_start_delay'])
+    initialize_fc(mc_state, ser, vals, args['mc_start_delay'])
 
     # Take the first set of sensor readings
-    extract_sensor_values(send_mc_cmd(ser, make_fc_cmd()), vals)
+    extract_sensor_values(send_mc_cmd(ser, make_fc_cmd(mc_state)), vals)
 
     # Let the system know that you are good to go.
     b.wait()
 
     while not app_state['stop']:
-       
+      
+        """
         # Update current state - So logger routines can intelligently log changes
         global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
         old_mc_cmd_str = cur_mc_cmd_str
-        cur_mc_cmd_str = make_fc_cmd()
+        cur_mc_cmd_str = make_fc_cmd(mc_state)
         old_mc_response = cur_mc_response
         
         # Send the current command to the fc.
         cur_mc_response = send_mc_cmd(ser, cur_mc_cmd_str)
+        """
+
+        # Send a command string to the Arduino that actuates as per the current controller state.
+        cur_mc_response = send_mc_cmd(ser, make_fc_cmd(mc_state))
 
         # Look for a set of sensor readings and extract them if you find one.
         extract_sensor_values(cur_mc_response, vals)
 
         # Look for warnings and errors.
-        log_cmd_changes()
+        #- log_cmd_changes()
 
         sleep(1)
 

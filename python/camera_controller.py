@@ -16,13 +16,16 @@ logger = get_sub_logger(__name__)
 
 camera_lock = Lock()
 
-def snap() -> 'file_path':
+def snap(repl, pose_on_cmd, pose_off_cmd) -> 'file_path':
 
     # Wait for camera to become available.
     camera_lock.acquire()
 
     try:
         logger.info('Creating new camera image')
+
+        # Tell the light controller to pose for a picture
+        repl(pose_on_cmd)
 
         file_name = '{:%Y%m%d_%H_%M_%S}.jpg'.format(datetime.utcnow())
         file_location = '{}{}'.format(getcwd() + '/pictures/', file_name) 
@@ -67,7 +70,14 @@ def snap() -> 'file_path':
             logger.error('Camera error: {}: {}'.format(exc_info()[0], exc_info()[1]))
             return None
     finally:
+        # According to someone on stack overflow: The finally clause is also executed “on the way out” 
+        # when any other clause of the try statement is left via a break, continue or return statement. So
+        # even though there are return statements in the code above the Python interpretter should still
+        # execute the next block of code before returning to the caller.
         camera_lock.release()
+        
+        # Tell the light controller to go back to it's normal operation
+        repl(pose_off_cmd)
 
 def make_help(args):
     
@@ -91,8 +101,6 @@ def start(app_state, args, b):
    
     camera_subscribers = get_camera_subscribers(args['subscribers'])
 
-    #- camera_lock = Lock()
-    
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
@@ -109,10 +117,16 @@ def start(app_state, args, b):
         for s in camera_subscribers:
             if s.wants_picture(this_instant, state['startup']):
                 if file_location == None:
-                    file_location = snap()
+                    file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
                 s.new_picture(file_location)
 
-        # TBD - put in code to delete any picture files that were created.
+        # TODO - put in code to delete any picture files that were created. Keep in mind that this assumes that 
+        #        the s's above don't return from the new_picture method till they are done with the file.  A 
+        #        more sophisticated garbage collection scheme is required if the listeners need the file
+        #        for the an arbitrary amount of time after the new_picture method returns.  One way maybe is to
+        #        to create a queue for each listener and to not delete files that are still in one of the queues.
       
         state['startup'] = False
         sleep(1)  
+
+    logger.info('exiting the camera controller thread')

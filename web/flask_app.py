@@ -4,6 +4,8 @@ class fopdwFlask(Flask):
 
     jinja_options = Flask.jinja_options.copy()
 
+    # change the server side Jinja template code markers so that we can use Vue.js on the client.
+    # Vue.js uses {{ }} as code markers so we don't want Jinja to interpret them.
     jinja_options.update(dict(
         block_start_string = '(%',
         block_end_string = '%)',
