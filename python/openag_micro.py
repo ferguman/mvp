@@ -376,13 +376,13 @@ def send_mc_cmd(ser, cmd_str):
 
     serial_interface_lock.acquire()
 
-    # Update current state - So logger routines can intelligently log changes
-    global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
-    old_mc_cmd_str = cur_mc_cmd_str
-    cur_mc_cmd_str = cmd_str 
-    old_mc_response = cur_mc_response
-    
     try:
+        # Update current state - So logger routines can intelligently log changes
+        global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
+        old_mc_cmd_str = cur_mc_cmd_str
+        cur_mc_cmd_str = cmd_str 
+        old_mc_response = cur_mc_response
+    
         ser.write(cmd_str)
         mc_response = ser.read_until(b'OK\r\n')
         ser.reset_input_buffer()
@@ -467,7 +467,7 @@ def start(app_state, args, b):
 
     while not app_state['stop']:
       
-        """
+        """-
         # Update current state - So logger routines can intelligently log changes
         global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
         old_mc_cmd_str = cur_mc_cmd_str

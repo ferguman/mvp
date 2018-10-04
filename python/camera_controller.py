@@ -70,6 +70,7 @@ def snap(repl, pose_on_cmd, pose_off_cmd) -> 'file_path':
             logger.error('Camera error: {}: {}'.format(exc_info()[0], exc_info()[1]))
             return None
     finally:
+        # TODO: Track down the official documentation on this and replace the following with it.
         # According to someone on stack overflow: The finally clause is also executed “on the way out” 
         # when any other clause of the try statement is left via a break, continue or return statement. So
         # even though there are return statements in the code above the Python interpretter should still
@@ -78,6 +79,14 @@ def snap(repl, pose_on_cmd, pose_off_cmd) -> 'file_path':
         
         # Tell the light controller to go back to it's normal operation
         repl(pose_off_cmd)
+
+def make_snap(repl, pose_on_cmd, pose_off_cmd):
+
+    def snap_cmd():
+        return snap(repl, pose_on_cmd, pose_off_cmd)
+
+    return snap_cmd
+
 
 def make_help(args):
     
@@ -104,7 +113,7 @@ def start(app_state, args, b):
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    app_state[args['name']]['snap'] = snap
+    app_state[args['name']]['snap'] = make_snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
 
     # Don't proceed until all the other threads are up and ready.
     b.wait()    

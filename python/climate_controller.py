@@ -121,6 +121,8 @@ def show_date(date, prelude_msg):
 
 def show_state():
 
+    # TODO: Add the camera pose state to this print out.
+
     try:
         s =     'Mode:  {}\n'.format(climate_state['run_mode'])  
 

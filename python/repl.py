@@ -88,9 +88,13 @@ def trans_cmds(input_str):
 def make_run_cmd(repl_globals, app_state):
 
     def run_cmd(cmd):
-        
-        # Wait for a lock.
-        cmd_lock.acquire()
+       
+        # Currently the system implements functions that cause this function to be re-entered. For
+        # example run the camera.snap() command from the terminal. So this function cannot lock or
+        # it will deadlock on the 2nd entry.
+        #
+        #- Wait for a lock.
+        #- cmd_lock.acquire()
         
         try:
             #- print(trans_cmds(cmd) + '\n')
@@ -110,7 +114,8 @@ def make_run_cmd(repl_globals, app_state):
             logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
             return 'command error. enter sys.help() for help'
         finally:
-            cmd_lock.release()
+            #- cmd_lock.release()
+            pass
 
     return run_cmd
 
