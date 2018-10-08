@@ -10,24 +10,31 @@
 # edited to fit your particular situation.
 """
 [Unit]
-Description=mvp
+Description=fopd
 Wants=network-online.target
 After=network-online.target
 
 [Service]
-WorkingDirectory=/home/pi/openag-mvp
+WorkingDirectory=/home/pi/fopd
 User=pi
-ExecStart=/usr/bin/python3 /home/pi/openag-mvp/mvp.py --silent
+ExecStart=/home/pi/fopd/venv/bin/python  /home/pi/fopd/fopd.py --silent
 Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target
 """
+#
 # Notes on systemd
-# If your program uses a virtual environment then use the python located in the virtual environment bin folder.
-# After creating the systemd file run to 
+#
+# 1) If your program uses a virtual environment then use the python located in the virtual environment bin folder.
+#    (e.g. /home/pi/fopd/venv/bin/python)
+# 2) In order to tell your Linux OS to start the systemd service on boot, run the following command:
+#    sudo systemctl enable fopd
+#    The above command assumes that your systemd service file is named fopd.service.
+# 
+#
 # The mvp provides a REPL loop for interactive operation. This loop can be turned off
-# by invoking the mvp in silent mode.
+# by invoking the mvp in silent mode. (i.e. --silentysm as a python argument to the invocation of fopd.py.
 #
 # It is assumed that mvp.py is located in a directory that contains code and data organized
 # identical to the way it is stored in github (https://github.com/ferguman/fopd)
@@ -56,7 +63,7 @@ import threading
 from config.config import system
 from web.flask_app import run_flask 
 from python.args import get_args
-from python.repl import repl
+from python.repl import start
 
 # Process the command line args
 args = get_args()
@@ -67,7 +74,7 @@ logger.info('fopd device id: {}'.format(system['device_id']))
 # Some threads such as repl and web chart generator expose functions on 'sys', so
 # add the 'sys' key for them to tack stuff onto. 
 s = {'name': system['name']}
-app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent, 'sys':{}}
+app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent, 'sys':{'cmd':None}}
 
 # create a Barrier that all the threads can syncronize on. This is to
 # allow threads such as mqtt or data loggers to get initialized before
@@ -83,9 +90,10 @@ for r in system['resources']:
 
     tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
-# start a thread for the repl (if it is enabled)
-if not args.silent:
-    tl.append(threading.Thread(target=repl, name='repl', args=(app_state,)))
+# start the built in REPL interpretter.
+#- if not args.silent:
+#- tl.append(threading.Thread(target=repl, name='repl', args=(app_state, args.silent)))
+tl.append(threading.Thread(target=start, name='repl', args=(app_state, args.silent)))
 
 # Start all threads
 for t in tl:

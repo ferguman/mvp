@@ -5,6 +5,7 @@
 from getpass import getpass
 from sys import exc_info
 from threading import Lock
+from time import sleep
 import re
 
 from python.logger import get_sub_logger 
@@ -137,7 +138,7 @@ def make_shut_down_werkzeug(app_state):
 
     return shut_down_werkzeug
 
-def repl(app_state):
+def start(app_state, silent_mode):
 
     print('Enter: sys.help() to see a list of available commands.')
 
@@ -160,10 +161,16 @@ def repl(app_state):
     #       from the Arduino serial monitor.
 
     while not app_state['stop']:
-       
-        # TBD: Need to sanitize the name to guard against shell attack.
-        cmd = input(device_name + ': ')
 
-        print(app_state['sys']['cmd'](cmd))
+        # Listen for commands from the shell if enabled, otherwise wait to be stopped.
+        if not silent_mode:
+            # TBD: Need to sanitize the name to guard against shell attack.
+            cmd = input(device_name + ': ')
+            print(app_state['sys']['cmd'](cmd))
+        else:
+            # TODO - I think one can just return at this point. No need to keep the thread safe, 
+            #        but wait, things like repl_globals need to stay alive so the command interpretter 
+            #        can be invoked from other resources. So maybe I can't kill the thread.
+            sleep(1)
 
-    logger.info('command line interface exiting')
+    logger.info('command interpretter exiting')
