@@ -30,16 +30,16 @@ def send_sensor_data_via_mqtt_v2(s, mqtt_client, organization_id):
 
    logger.info('published topic: {}'.format(topic))
 
-def make_sensor_reading_payload(s):
+def make_sensor_reading_payload(sr):
 
-   return  '{"sensor":"'             + s['device_name'] + '", '\
-           '"device_id":"'           + s['device_id'] + '", '\
-           '"subject":"'             + s['subject'] + '", '\
-           '"subject_location_id":"' + s['subject_location_id'] + '", '\
-           '"attribute":"'           + s['attribute'] + '", '\
-           '"value":"'               + s['value'] + '", '\
-           '"units":"'               + s['units'] + '", '\
-           '"time":"'                + datetime.datetime.utcfromtimestamp(s['ts']).isoformat() + '"}'
+    return  '{"sensor":"'             + sr['device_name'] + '", '\
+            '"device_id":"'           + sr['device_id'] + '", '\
+            '"subject":"'             + sr['subject'] + '", '\
+            '"subject_location_id":"' + sr['subject_location_id'] + '", '\
+            '"attribute":"'           + sr['attribute'] + '", '\
+            '"value":"'               + sr['value'] + '", '\
+            '"units":"'               + sr['units'] + '", '\
+            '"time":"'                + datetime.datetime.utcfromtimestamp(sr['ts']).isoformat() + '"}'
 
 def publish_mqtt_topic(mqtt_client, topic, payload_value):
 

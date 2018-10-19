@@ -207,7 +207,6 @@ def start(app_state, args, b):
 
                     if item[0] == 'sensor_reading':
                         logger.info('publishing reading via mqtt')
-                        #- send_sensor_data_via_mqtt_v2(item[1], mqtt_client, args['organization_id'])
                         publish_sensor_reading(mqtt_client, args['organization_id'], item[1])
 
                         # Bypass the sleep command in order to keep draining the queue in real time.

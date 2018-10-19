@@ -165,7 +165,14 @@ def extract_sensor_values(mc_response, vals):
                    vals[i-1]['value'] = values[i] 
 
     if not readings_found:
-        logger.error('Error reading fc sensors. fc returned: {}'.format(result))
+        # when the arduino encounters one or more sensor errors it sends a line for each
+        # failed sensor. The format of the each line is:
+        #    status_level, sensor_name, status_code, status_msg
+        # status_level is code of 0, 1, or 2 which decode to OK, WARNING, or ERROR
+        # status_code is a whole number that gives sensor specific satus or error info
+        # status_msg is a human readable description of what the status code means.
+        #
+        logger.error('Error reading fc sensors. fc returned: {}'.format(mc_response))
         for r in vals:
             r['value'] = None
 
@@ -363,16 +370,6 @@ def tokenize_mc_response(mc_response):
 #
 def send_mc_cmd(ser, cmd_str):
 
-    """
-    # Update current state - So logger routines can intelligently log changes
-    global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
-    old_mc_cmd_str = cur_mc_cmd_str
-    cur_mc_cmd_str = make_fc_cmd(mc_state)
-    old_mc_response = cur_mc_response
-    
-    # Send the current command to the fc.
-    cur_mc_response = send_mc_cmd(ser, cur_mc_cmd_str)
-    """
 
     serial_interface_lock.acquire()
 
@@ -385,6 +382,7 @@ def send_mc_cmd(ser, cmd_str):
     
         ser.write(cmd_str)
         mc_response = ser.read_until(b'OK\r\n')
+        logger.debug('arduino response {}'.format(mc_response))
         ser.reset_input_buffer()
     finally:
         serial_interface_lock.release()
