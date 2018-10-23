@@ -101,7 +101,7 @@ def make_fc_cmd(mc_state):
     # if the system is in camera pose mode then override the light commands
     # in order to give good lighting for the camera.
     if mc_state['camera_pose']:
-        cmds[target_indexes['grow_light']] = False
+        cmds[target_indexes['grow_light']] = False 
         cmds[target_indexes['chamber_lights']] = True
 
     # walk the command array and build the arduino command
@@ -369,7 +369,6 @@ def tokenize_mc_response(mc_response):
 # to the command.
 #
 def send_mc_cmd(ser, cmd_str):
-
 
     serial_interface_lock.acquire()
 

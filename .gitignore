@@ -9,7 +9,6 @@ climate_recipes/*
 data/*.txt
 logs/*.*
 !logs/.gitkeep
-web/image.jpg
 config/*.*
 !config/.gitkeep
 pictures/*.*
@@ -18,3 +17,5 @@ state/*.*
 state/*
 !state/.gitkeep
 venv/
+web/
+web/static/*
