@@ -148,6 +148,9 @@ def show_state():
         s = s + 'Vent fan on: {}\n'.format(climate_state['vent_fan_on'])
         s = s + show_date(climate_state['vent_last_on_time'], 'Last vent fan on time')
 
+        s = s + 'Circulation fan on: {}\n'.format(climate_state['circ_fan_on'])
+        s = s + show_date(climate_state['circ_fan_last_on_time'], 'Last circulation fan on time')
+
         s = s + 'Air heater on: {}\n'.format(climate_state['air_heater_on'])
         s = s + 'Air temperature: {}\n'.format(climate_state['cur_air_temp'])
 
@@ -234,6 +237,9 @@ def init_state(args):
 
     climate_state['vent_fan_on'] = False
     climate_state['vent_last_on_time'] = None
+
+    climate_state['circ_fan_on'] = False 
+    climate_state['circ_fan_last_on_time'] = None
 
     climate_state['air_heater_on'] =  False
     climate_state['cur_air_temp'] = None
@@ -383,6 +389,14 @@ def check_vent_fan(controller):
             logger.info('turning vent fan off') 
 
 
+def check_circ_fan(controller):
+
+    #turn the circulation fan on
+    climate_state['circ_fan_on'] = True
+    climate_state['circ_fan_last_on_time'] = climate_state['cur_time']
+    controller['cmd']('on', 'circ_fan') 
+    logger.info('turning circulation fan on') 
+
 def check_air_temperature(controller):
 
     values = get_current_recipe_step_values('air_temperature', ('low_limit', 'high_limit'))
@@ -522,6 +536,7 @@ def start(app_state, args, barrier):
     # Don't proceed until all the other resources are available.
     barrier.wait()    
 
+
     while not app_state['stop']:
 
        state_lock.acquire()
@@ -532,6 +547,8 @@ def start(app_state, args, barrier):
                update_climate_state(args['min_log_period'], app_state['mc'])
 
                # TODO - need to make 'mc' configurable from config file.
+               check_circ_fan(app_state['mc'])
+
                check_lights(app_state['mc'])
 
                check_vent_fan(app_state['mc'])
