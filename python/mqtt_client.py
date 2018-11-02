@@ -11,50 +11,12 @@ import paho.mqtt.client as mqtt
 #-                          mqtt_url, mqtt_port, plain_text_mqtt_password
 
 from python.logger import get_sub_logger 
-from nacl_fop import decrypt
+from python.nacl_fop import decrypt
 from python.repl import get_passphrase
 from python.send_mqtt_data import publish_sensor_reading, publish_cmd_response #- send_sensor_data_via_mqtt_v2
 
 #- logger = getLogger('mvp' + '.' + __name__)
 logger = get_sub_logger(__name__)
-
-""" -
-# TBD: Need to refactor to use something like pyopenssl.
-def decrypt_mqtt_password(passphrase):
-
-   # call open SSL to decrypt the encrypted MQTT password.
-   # TBD - putting the passphrase on the command line may be a security issue. 
-   open_ssl_decrypt_command = 'echo "' + encrypted_mqtt_password + '" | openssl enc -d -k "'\
-                              + passphrase + '" -a -aes-256-cbc'
-   
-   try:
-      #TBD - At some point upgrade to the new Python (3.5 or newer) and use the .run commmand.
-      password_decrypt_results = check_output(open_ssl_decrypt_command, shell=True) 
-      # print("MQTT password: " + mqtt_password + "\n") 
-      #- mqtt_password = password_decrypt_results.decode("utf-8")[0:-1]
-      return password_decrypt_results.decode("utf-8")[0:-1]
-   except:
-      logger.error('Execution of openssl failed: {}'.format(exc_info()[1]))
-      return None 
-"""
-"""-
-def get_mqtt_password(app_state):
-
-    if len(plain_text_mqtt_password) > 0:
-        return plain_text_mqtt_password 
-    elif len(encrypted_mqtt_password) > 0:
-        if app_state['silent_mode']:
-            #- checked
-            logger.warning('The MQTT password is encrypted. There is no way to get the passphrase when'
-                           + ' running in silent mode. No MQTT functions will be avaiable.')
-            return None
-        else: 
-            return decrypt_mqtt_password(get_passphrase())
-    else: 
-        #- checked
-        logger.warning('No MQTT password is contained in the config file. No MQTT functions will be avaiable.')
-        return None
-"""
 
 mqtt_connection_results = ('connection successful', 'connection refused - incorrect protocol version',
                            'connection refused - invalid client identifier', 'connection refused - server unavailable',
@@ -102,10 +64,10 @@ def on_subscribe(mqtt, userdata, mid, granted_qos):
 # TBD - Need to figure out how to time it out
 # after a configurable period of time.
 #
-def start_paho_mqtt_client(mqtt_password, args, app_state, publish_queue):
+def start_paho_mqtt_client(args, app_state, publish_queue):
 
     try:
-        mqtt_client = paho.mqtt.client.Client(mqtt_client_id)
+        mqtt_client = paho.mqtt.client.Client(args['mqtt_client_id'])
 
         # Configure the client callback functions
         mqtt_client.on_connect = on_connect
@@ -118,18 +80,17 @@ def start_paho_mqtt_client(mqtt_password, args, app_state, publish_queue):
 
         mqtt_client.tls_set()
 
-        mqtt_client.username_pw_set(args['mqtt_username'], mqtt_password)
+        mqtt_client.username_pw_set(args['mqtt_username'], decrypt(args['mqtt_password_b64_cipher']))
 
-        mqtt_client.connect(mqtt_url, mqtt_port, 60)
+        mqtt_client.connect(args['mqtt_url'], args['mqtt_port'], 60)
 
         # Start the MQTT client
         mqtt_client.loop_start()
 
-        return [True, mqtt_client]
+        return mqtt_client
     except:
       logger.error('Unable to create an MQTT client: {} {}, exiting...'.format(exc_info()[0], exc_info()[1]))
-      return [False, None]
-      #- exit()
+      return None
 
 def make_mqtt_help(res_name):
 
@@ -157,20 +118,25 @@ def start(app_state, args, b):
 
     if args['enable']:
 
-        #- pw = get_mqtt_password(app_state)
+        """ - 
+        pw = get_mqtt_password(app_state)
 
         if pw is not None:
             # Note that the paho mqtt client has the ability to spawn it's own thread.
             # TBD - app_state is "too much" to give here. We need to figure out how to pare it down to
             # app_state['sys']['cmd']
-            mqtt_client = start_paho_mqtt_client(decrypt(args['mqtt_password_b64_cipher']), args, app_state, publish_queue)[1]
-
+            mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)[1]
+        """
+        
         app_state[args['name']]['help'] = make_mqtt_help(args['name'])
+
+        mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)
 
         # Let the system know that you are good to go. 
         b.wait()
 
         if mqtt_client: 
+            # TODO - Design substriction system and then complete it.
             # Subscribe to the broker so commands can be received.
             # QOS 2 = Exactly Once
             try:

@@ -77,4 +77,7 @@ def logDB(r, comment=''):
     exception will be raised.
     """
 
-    result = requests.post(local_couchdb_url, data = json_data, headers=headers)
+    try:
+        result = requests.post(local_couchdb_url, data = json_data, headers=headers)
+    except:
+        logger.error('cannot post data to the local couchdb')

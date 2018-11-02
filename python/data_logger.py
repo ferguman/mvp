@@ -70,3 +70,5 @@ def start(app_state, args, b):
                 logger.error('no sensor readings available.')
       
        sleep(1)
+
+       logger.info('data logger thread stopping')

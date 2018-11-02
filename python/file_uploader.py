@@ -54,7 +54,7 @@ def get_file_hash(path_name):
 def get_jws(path_name, camera_id):
 
     return jws.sign(claim_info(get_file_hash(path_name), extract_timestamp(path_name), camera_id), 
-                    decrypt(hmac_secret_key),
+                    decrypt(hmac_secret_key_b64_cipher),
                     algorithm='HS256')
 
 def upload_camera_image(path_name, url, camera_id):

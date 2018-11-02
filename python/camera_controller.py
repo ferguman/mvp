@@ -1,5 +1,4 @@
 # fopd resource
-#
 
 from os import getcwd
 from datetime import datetime
@@ -130,6 +129,9 @@ def start(app_state, args, b):
             if s.wants_picture(this_instant, state['startup']):
                 if file_location == None:
                     file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+                    if file_location == None:
+                        logger.error('Cannot take a picture')
+                        break
                 s.new_picture(file_location)
 
         # TODO - put in code to delete any picture files that were created. Keep in mind that this assumes that 
@@ -141,4 +143,4 @@ def start(app_state, args, b):
         state['startup'] = False
         sleep(1)  
 
-    logger.info('exiting the camera controller thread')
+    logger.info('Exiting the camera controller thread')

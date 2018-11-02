@@ -53,10 +53,10 @@ class si7021(object):
 
            ts = time()
 
-           self.vals[self.humidity_val_index]['value'] =  self.getHumidity()
+           self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(self.getHumidity())
            self.vals[self.humidity_val_index]['ts'] = ts 
 
-           self.vals[self.temperature_val_index]['value'] = self.getTempC()
+           self.vals[self.temperature_val_index]['value'] = '{:+.1f}'.format(self.getTempC())
            self.vals[self.temperature_val_index]['ts'] = ts 
 
 
