@@ -1,5 +1,3 @@
-#- from config.config import camera_subscribers
-
 def make_subscriber(dict):
 
     module = __import__('python.camera_subscribers.{}'.format(dict['sub']), fromlist=[dict['sub']])

@@ -1,6 +1,7 @@
 import threading
-import smbus2, time
+import smbus2
 import sys
+from time import sleep, time
 
 from python.logger import get_sub_logger 
 
@@ -12,8 +13,52 @@ logger = get_sub_logger(__name__)
 
 class si7021(object):
 
-    def __init__(self):
+    def __init__(self, config: dict, vals: list):
         self.bus = smbus2.SMBus(1)
+        self.config = config
+
+        self.init_sensor_value_list(vals)
+
+        logger.info('i2c sensor si7021. Providing air temperature and humidity. Will use i2c addr {}'.format(address)) 
+
+    def init_sensor_value_list(self, vals: list):
+
+       """ vals is the master list of sensor readings.  It may contain readings 
+           from sensors other than this one.  Tack this sensor's readings onto the list
+           and remember where in the list the readings are at. """
+      
+       self.vals = vals
+       self.humidity_val_index = None
+       self.temperature_val_index = None
+
+       for a in self.config['attributes']:
+
+           self.vals.append(
+               {'value_name':a['value_name'], 'type':'environment', 'device_name':self.config['device_name'], 
+                'device_id':self.config['device_id'],
+                'subject':a['subject'], 'subject_location_id':a['subject_location_id'], 
+                'attribute':a['attribute'], 'value':None, 'units':a['units'], 'ts':None})
+
+           if a['attribute'].lower() == 'humidity':
+               self.humidity_val_index = len(vals) - 1
+           elif a['attribute'].lower() == 'temperature':
+               self.temperature_val_index = len(vals) - 1 
+           else:
+               logger.error('si7021: uknown attribute {}'.format(a['attribute']))
+
+       if self.humidity_val_index == None or self.temperature_val_index == None:
+           logger.error('si7021: You must specify humidity and temperature attributes for this device.')
+
+    def update_sensor_readings(self, take_readings=False):
+
+           ts = time()
+
+           self.vals[self.humidity_val_index]['value'] =  self.getHumidity()
+           self.vals[self.humidity_val_index]['ts'] = ts 
+
+           self.vals[self.temperature_val_index]['value'] = self.getTempC()
+           self.vals[self.temperature_val_index]['ts'] = ts 
+
 
     def read_word(self):
         """
@@ -33,32 +78,20 @@ class si7021(object):
     def write(self, command):
         self.bus.write_byte(address, command)
 
-    """
-    def temp_and_humidity(self):
-        self.write(rh_no_hold)
-        time.sleep(0.03)
-        percent_rh = self.read_word()
-        percent_rh = 125.0/65536.0*percent_rh-6.0
-        self.write(previous_temp)
-        temp_c = self.read_word()
-        temp_c = 175.72/65536.0*temp_c-46.85
-        return temp_c, percent_rh
-    """
-
     def getHumidity(self):
-        lock = threading.Lock()
-        with lock:
-            self.write(rh_no_hold)
-            time.sleep(0.03)
-            percent_rh = self.read_word()
+        #- lock = threading.Lock()
+        #- with lock:
+        self.write(rh_no_hold)
+        sleep(0.03)
+        percent_rh = self.read_word()
         percent_rh = 125.0/65536.0*percent_rh-6.0
         return percent_rh
 
     def getTempC(self):
-        lock = threading.Lock()
-        with lock:
-            self.write(previous_temp)
-            temp_c = self.read_word()
+        #- lock = threading.Lock()
+        #- with lock:
+        self.write(previous_temp)
+        temp_c = self.read_word()
         temp_c = 175.72/65536.0*temp_c-46.85
         return temp_c
 

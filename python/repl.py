@@ -1,6 +1,5 @@
 # TODO: Evaluate Python Fire https://github.com/google/python-fire.  It generates CLI's for
 # Python objects.
-#
 
 from getpass import getpass
 from sys import exc_info
@@ -12,17 +11,13 @@ from python.logger import get_sub_logger
 
 logger = get_sub_logger(__name__)
 
-from config.config import enable_mqtt, device_name, system
+from config.config import device_name, system
 
 cmd_lock = Lock()
 
 def get_passphrase():
 
-    #- If mqtt is enabled then ask the user for the passphrase.
-    #- if enable_mqtt == True:
-        return getpass("Enter your passphrase: ")
-    #- else:
-    #-    return None
+    return getpass("Enter your passphrase: ")
 
 def help():
     

@@ -116,7 +116,6 @@ def start(app_state, args, b):
     app_state[args['name']]['help'] = make_help(args) 
     # TODO - You can't use app_state['sys']['cmd'] tills it's initialized or can you?
 
-    #- app_state[args['name']]['snap'] = make_snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
     app_state[args['name']]['snap'] = lambda: snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
 
     # Don't proceed until all the other threads are up and ready.

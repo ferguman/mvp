@@ -16,6 +16,6 @@ pictures/*.*
 state/*.*
 state/*
 !state/.gitkeep
-venv/
+fopd/
 web/
 web/static/*

@@ -1,23 +1,24 @@
 from datetime import datetime
-#- from logging import getLogger
 from queue import Queue, Empty
 from subprocess import * 
 from sys import path, exc_info
 from time import sleep
+
 import paho.mqtt.client
 import paho.mqtt.client as mqtt
 
-from config.config import enable_mqtt, encrypted_mqtt_password, mqtt_client_id, mqtt_username,\
-                          mqtt_url, mqtt_port, plain_text_mqtt_password
+#- from config.config import enable_mqtt, encrypted_mqtt_password, mqtt_client_id, mqtt_username,\
+#-                          mqtt_url, mqtt_port, plain_text_mqtt_password
 
 from python.logger import get_sub_logger 
+from nacl_fop import decrypt
 from python.repl import get_passphrase
 from python.send_mqtt_data import publish_sensor_reading, publish_cmd_response #- send_sensor_data_via_mqtt_v2
 
 #- logger = getLogger('mvp' + '.' + __name__)
 logger = get_sub_logger(__name__)
 
-
+""" -
 # TBD: Need to refactor to use something like pyopenssl.
 def decrypt_mqtt_password(passphrase):
 
@@ -35,8 +36,8 @@ def decrypt_mqtt_password(passphrase):
    except:
       logger.error('Execution of openssl failed: {}'.format(exc_info()[1]))
       return None 
-
-
+"""
+"""-
 def get_mqtt_password(app_state):
 
     if len(plain_text_mqtt_password) > 0:
@@ -53,7 +54,7 @@ def get_mqtt_password(app_state):
         #- checked
         logger.warning('No MQTT password is contained in the config file. No MQTT functions will be avaiable.')
         return None
-
+"""
 
 mqtt_connection_results = ('connection successful', 'connection refused - incorrect protocol version',
                            'connection refused - invalid client identifier', 'connection refused - server unavailable',
@@ -101,7 +102,7 @@ def on_subscribe(mqtt, userdata, mid, granted_qos):
 # TBD - Need to figure out how to time it out
 # after a configurable period of time.
 #
-def start_paho_mqtt_client(mqtt_password, app_state, publish_queue):
+def start_paho_mqtt_client(mqtt_password, args, app_state, publish_queue):
 
     try:
         mqtt_client = paho.mqtt.client.Client(mqtt_client_id)
@@ -113,13 +114,11 @@ def start_paho_mqtt_client(mqtt_password, app_state, publish_queue):
         mqtt_client.on_disconnect = on_disconnect
         mqtt_client.on_subscribe = on_subscribe
 
-        #- mqtt_client.on_log = on_log
-
         mqtt_client.enable_logger(logger)
 
         mqtt_client.tls_set()
 
-        mqtt_client.username_pw_set(mqtt_username, mqtt_password)
+        mqtt_client.username_pw_set(args['mqtt_username'], mqtt_password)
 
         mqtt_client.connect(mqtt_url, mqtt_port, 60)
 
@@ -158,13 +157,13 @@ def start(app_state, args, b):
 
     if args['enable']:
 
-        pw = get_mqtt_password(app_state)
+        #- pw = get_mqtt_password(app_state)
 
         if pw is not None:
             # Note that the paho mqtt client has the ability to spawn it's own thread.
             # TBD - app_state is "too much" to give here. We need to figure out how to pare it down to
             # app_state['sys']['cmd']
-            mqtt_client = start_paho_mqtt_client(pw, app_state, publish_queue)[1]
+            mqtt_client = start_paho_mqtt_client(decrypt(args['mqtt_password_b64_cipher']), args, app_state, publish_queue)[1]
 
         app_state[args['name']]['help'] = make_mqtt_help(args['name'])
 

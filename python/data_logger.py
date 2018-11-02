@@ -46,7 +46,6 @@ def start(app_state, args, b):
 
             logger.info('Logging sensor readings')
 
-            #- if 'sensor_readings' in app_state:
             if 'sensor_readings' in app_state[args['source']]:
                 for r in app_state[args['source']]['sensor_readings']:
 

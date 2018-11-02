@@ -6,8 +6,11 @@ from requests import post
 from time import time
 from uuid import uuid4
 
-from config.config import device_id, hmac_secret_key, fop_jose_id
 from python.logger import get_sub_logger 
+from python.nacl_fop import decrypt
+
+#- from config.config import device_id, hmac_secret_key, fop_jose_id
+from config.config import device_id, hmac_secret_key_b64_cipher, fop_jose_id
 
 # Note: This module uses JWT security (via jose).  Paseto is another system for implemeting token based security.
 
@@ -51,7 +54,7 @@ def get_file_hash(path_name):
 def get_jws(path_name, camera_id):
 
     return jws.sign(claim_info(get_file_hash(path_name), extract_timestamp(path_name), camera_id), 
-                    hmac_secret_key,
+                    decrypt(hmac_secret_key),
                     algorithm='HS256')
 
 def upload_camera_image(path_name, url, camera_id):
