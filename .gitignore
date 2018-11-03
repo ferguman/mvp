@@ -6,6 +6,7 @@ __pycache__/
 climate_recipes/*.*
 climate_recipes/*
 !climate_recipes/.gitkeep
+!climate_recipes/test1.rcp
 data/*.txt
 logs/*.*
 !logs/.gitkeep

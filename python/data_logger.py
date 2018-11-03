@@ -71,4 +71,4 @@ def start(app_state, args, b):
       
        sleep(1)
 
-       logger.info('data logger thread stopping')
+    logger.info('data logger thread stopping')

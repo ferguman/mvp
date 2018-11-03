@@ -25,7 +25,6 @@ def start(app_state, args, b):
 
       this_ts = time()
 
-      #- if (this_ts - state['last_charting_ts'])/60 > charting_interval:
       if (this_ts - state['last_charting_ts'])/60 > args['charting_interval']:
 
          # Generate the charts
@@ -35,10 +34,8 @@ def start(app_state, args, b):
 
          try:
 
-            #- for chart_info in chart_list:
             for chart_info in args['chart_list']:
 
-               #- generate_chart(couchdb_location_url, chart_info, app_state)
                generate_chart(args['couchdb_location_url'], chart_info, logger)
 
             state['last_charting_ts'] = this_ts
