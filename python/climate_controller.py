@@ -397,13 +397,16 @@ def check_circ_fan(controller):
     controller['cmd']('on', 'circ_fan') 
     logger.info('turning circulation fan on') 
 
+# TODO: Need to make the air temp function adaptible so that it knows to use the vent fan if there is no 
+# heater.  Then if it uses the circ fan the cc needs to look at both the vent fan and the air temp fucntion
+# to see if either wants it on.
 def check_air_temperature(controller):
 
     values = get_current_recipe_step_values('air_temperature', ('low_limit', 'high_limit'))
     heater_on = None
 
     if values != None:
-        # TBD - Need to set the temperature gap based upon the controllers abilities. The FCV1 temperature sensor
+        # TODO  Need to set the temperature gap based upon the controllers abilities. The FCV1 temperature sensor
         #       is not that accurate so to avoid the heater going and off we enforce a minimal difference of 2.
         #       The reason the recipe can specify different values is to allow people to set wide ranges so that
         #       they don't need to use their heater a lot if that is their desire.
@@ -544,16 +547,15 @@ def start(app_state, args, barrier):
        try:
            if climate_state['run_mode'] == 'on': 
 
-               update_climate_state(args['min_log_period'], app_state['mc'])
+               update_climate_state(args['min_log_period'], app_state[args['hardware_interface']])
 
-               # TODO - need to make 'mc' configurable from config file.
-               check_circ_fan(app_state['mc'])
+               check_circ_fan(app_state[args['hardware_interface']])
 
-               check_lights(app_state['mc'])
+               check_lights(app_state[args['hardware_interface']])
 
-               check_vent_fan(app_state['mc'])
+               check_vent_fan(app_state[args['hardware_interface']])
                
-               check_air_temperature(app_state['mc'])
+               check_air_temperature(app_state[args['hardware_interface']])
 
            # Every once in a while write the state to the state file to make sure the file 
            # stays up to date.  TBD: A more sophisticated system would write only when
