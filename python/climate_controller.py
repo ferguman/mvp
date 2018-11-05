@@ -28,10 +28,12 @@ climate_state = {}
 #
 def load_recipe_file(rel_path):
 
+    global climate_state
+
     climate_state['recipe'] = None
 
     recipe_path = getcwd() + rel_path
-    logger.debug('opening recipe file: {}'.format(recipe_path))
+    logger.info('loading recipe file: {}'.format(recipe_path))
 
     if path.isfile(recipe_path):
         logger.debug('found recipe file')
@@ -44,9 +46,11 @@ def load_recipe_file(rel_path):
                 logger.error('cannot parce recipe file.')
         
     else:
-        logger.debug('no recipe file found. the climate controller cannot run without a recipe file.')
+        logger.error('no recipe file found. the climate controller cannot run without a recipe file.')
 
 def load_state_file(rel_path):
+
+    global climate_state
 
     state_file_path = getcwd() + rel_path
     logger.debug('opening climate state file: {}'.format(state_file_path))
@@ -56,7 +60,7 @@ def load_state_file(rel_path):
         
         with open(state_file_path) as f:
             try:
-                global climate_state
+                #- global climate_state
                 climate_state = json.load(f)
             except:
                 logger.error('cannot load state file.')
@@ -64,7 +68,9 @@ def load_state_file(rel_path):
     else:
         logger.debug('no state file found. The climate controller will be set to off.')
 
-def write_state_file(rel_path, update_interval, force):
+def write_state_file(rel_path, update_interval: 'secs', force: bool):
+
+    global climate_state
 
     if force or (time.time() >= climate_state['last_state_file_update_time'] + update_interval):
 
@@ -97,7 +103,8 @@ def make_help(prefix):
         s = s + nul_pre + '    recipe_file=path)      - Load a recipe file. If no recipe_file argument is given\n'
         s = s + nul_pre + '                             then load the default recipe file as specified in the configuration file.\n'
         s = s + nul_pre + "                           - e.g. {}.cmd('lr', recipe_path='/climate_recipes/test1.rcp')\n".format(prefix)
-        s = s + cmd_pre + "cmd('stop')                - stop the current recipe.\n".format(prefix)
+        s = s + cmd_pre + "cmd('stop')                - stop the current recipe.\n"
+        s = s + cmd_pre + 'recipe()                   - Return the current recipe in JSON format.\n'
         s = s + cmd_pre + 'state()                    - Show climate controller state.\n'
         
         return s
@@ -105,6 +112,8 @@ def make_help(prefix):
     return help
 
 def show_recipe():
+
+    global climate_state
 
     if climate_state['recipe'] != None:
         return climate_state['recipe']
@@ -121,7 +130,7 @@ def show_date(date, prelude_msg):
 
 def show_state():
 
-    # TODO: Add the camera pose state to this print out.
+    global climate_state
 
     try:
         s =     'Mode:  {}\n'.format(climate_state['run_mode'])  
@@ -146,16 +155,25 @@ def show_state():
         s = s + show_date(climate_state['grow_light_last_off_time'], 'Last grow light off time')
 
         s = s + 'Vent fan on: {}\n'.format(climate_state['vent_fan_on'])
-        s = s + show_date(climate_state['vent_last_on_time'], 'Last vent fan on time')
+        s = s + show_date(climate_state['vent_fan_last_on_time'], 'Last vent fan on time')
+        s = s + show_date(climate_state['vent_fan_last_off_time'], 'Last vent fan off time')
 
         s = s + 'Circulation fan on: {}\n'.format(climate_state['circ_fan_on'])
         s = s + show_date(climate_state['circ_fan_last_on_time'], 'Last circulation fan on time')
 
-        s = s + 'Air heater on: {}\n'.format(climate_state['air_heater_on'])
         s = s + 'Air temperature: {}\n'.format(climate_state['cur_air_temp'])
 
+        s = s + 'Air flush on: {}\n'.format(climate_state['air_flush_on'])
+        s = s + show_date(climate_state['air_flush_last_on_time'], 'Last air flush on time')
+        s = s + show_date(climate_state['air_flush_last_off_time'], 'Last air flush off time')
+
+        s = s + 'Air heater on: {}\n'.format(climate_state['air_heater_on'])
         s = s + show_date(climate_state['air_heater_last_on_time'], 'Air heater last on time')
         s = s + show_date(climate_state['air_heater_last_off_time'], 'Air heater last off time')
+
+        s = s + 'Air cooler on: {}\n'.format(climate_state['air_cooler_on'])
+        s = s + show_date(climate_state['air_cooler_last_on_time'], 'Air cooler last on time')
+        s = s + show_date(climate_state['air_cooler_last_off_time'], 'Air cooler last off time')
 
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
@@ -168,6 +186,8 @@ def show_state():
 def make_cmd(config_args):
 
     def cmd(*args, **kwargs):
+
+        global climate_state
 
         state_lock.acquire()
 
@@ -189,11 +209,16 @@ def make_cmd(config_args):
                     climate_state['recipe_start_time'] = None
                     return 'OK'
                 elif args[0] == 'load_recipe' or args[0] == 'lr':
+
                     if not 'recipe_file' in kwargs:
                         # TBD - Need to 1st check to make sure the file exists and then warn user if it does not exist.
                         load_recipe_file(config_args['default_recipe_file'])
                     else:
                         load_recipe_file(kwargs['recipe_file'])
+
+                    # write the climate state to disk
+                    write_state_file(config_args['state_file'], 0, True)
+                    
                     return 'OK'
                 else:
                     return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
@@ -209,6 +234,8 @@ def make_cmd(config_args):
 
 
 def init_state(args):
+
+    global climate_state
 
     # Initialize the climate controller state - this stuff will get replaced
     # if there is a state file to load
@@ -236,13 +263,23 @@ def init_state(args):
     climate_state['grow_light_last_off_time'] = None
 
     climate_state['vent_fan_on'] = False
-    climate_state['vent_last_on_time'] = None
+    climate_state['vent_fan_last_on_time'] = None
+    climate_state['vent_fan_last_off_time'] = None
 
     climate_state['circ_fan_on'] = False 
     climate_state['circ_fan_last_on_time'] = None
 
-    climate_state['air_heater_on'] =  False
     climate_state['cur_air_temp'] = None
+
+    climate_state['air_flush_on'] = False
+    climate_state['air_flush_last_on_time'] = None
+    climate_state['air_flush_last_off_time'] = None
+
+    climate_state['air_cooler_on'] =  False
+    climate_state['air_cooler_last_on_time'] = None
+    climate_state['air_cooler_last_off_time'] = None
+
+    climate_state['air_heater_on'] =  False
     climate_state['air_heater_last_on_time'] = None
     climate_state['air_heater_last_off_time'] = None
 
@@ -255,6 +292,8 @@ def init_state(args):
 # value names -> tuple list of value names to return
 #
 def get_current_recipe_step_values(step_name, value_names):
+
+    global climate_state
 
     values = None 
 
@@ -327,6 +366,8 @@ def get_current_recipe_step_values(step_name, value_names):
     return values
 
 def check_lights(controller):
+
+    global climate_state
     
     value = get_current_recipe_step_values('light_intensity', ('value',))
 
@@ -354,42 +395,51 @@ def check_lights(controller):
             controller['cmd']('off', 'grow_light')
 
 
-def check_vent_fan(controller):
+def run_air_flush_loop(controller):
+
+    global climate_state
 
     values = get_current_recipe_step_values('air_flush', ('interval', 'duration'))
-    fan_on = None
+    flush_on = None
 
-    #logger.debug('vent_fan_on: {}, vent_last_on_time: {}, cur_time: {}, duration: {}, interval: {}'.format(climate_state['vent_fan_on'], climate_state['vent_last_on_time'], climate_state['cur_time'], values['duration'], values['interval']))
+    if values != None and climate_state['air_flush_last_on_time'] != None:
+        if climate_state['air_flush_on'] and\
+           climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['duration']:
 
-    if values != None and climate_state['vent_last_on_time'] != None:
-        if climate_state['vent_fan_on'] and\
-           climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['duration']:
-
-            fan_on = False
-        if not climate_state['vent_fan_on'] and\
-               climate_state['cur_time'] - climate_state['vent_last_on_time'] > 60 * values['interval']:
-            fan_on = True
-    elif values != None and climate_state['vent_last_on_time'] == None:
+            flush_on = False
+        elif not climate_state['air_flush_on'] and\
+               climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['interval']:
+            flush_on = True
+        else:
+            # Waiting for next transition to on or off so leave the fan in it's current state.
+            flush_on = climate_state['air_flush_on']
+    elif values != None and climate_state['air_flush_last_on_time'] == None:
         # Assume this is a startup state.  There are recipe values for the flush flan but 
         # no history on the flushing so go ahead and start a flush cycle.
-        fan_on = True
+        flush_on = True
     else:
         # There are no recipe values for flushing so leave the fan off.
-        fan_on = False
+        flush_on = False
 
-    if fan_on != None:
-        if fan_on:
-            climate_state['vent_fan_on'] = True
-            climate_state['vent_last_on_time'] = climate_state['cur_time']
-            controller['cmd']('on', 'vent_fan') 
-            logger.info('turning vent fan on') 
-        else:
-            climate_state['vent_fan_on'] = False
-            controller['cmd']('off', 'vent_fan') 
-            logger.info('turning vent fan off') 
+    if flush_on == None:
+        logger.error('air flush controller logic error. No flush determination was made.')
 
+    # Turn flush on/off if necessary
+    if flush_on and not climate_state['air_flush_on']:
+        logger.info('turning air flush on')
+        climate_state['air_flush_on'] = True
+        climate_state['air_flush_last_on_time'] = climate_state['cur_time']
+
+    if not flush_on and climate_state['air_flush_on']:
+        logger.info('turning air flush off')
+        climate_state['air_flush_on'] = False
+        climate_state['air_flush_last_off_time'] = climate_state['cur_time']
+
+    return flush_on
 
 def check_circ_fan(controller):
+
+    global climate_state
 
     #turn the circulation fan on
     climate_state['circ_fan_on'] = True
@@ -397,73 +447,157 @@ def check_circ_fan(controller):
     controller['cmd']('on', 'circ_fan') 
     logger.info('turning circulation fan on') 
 
-# TODO: Need to make the air temp function adaptible so that it knows to use the vent fan if there is no 
-# heater.  Then if it uses the circ fan the cc needs to look at both the vent fan and the air temp fucntion
-# to see if either wants it on.
-def check_air_temperature(controller):
+
+def run_heating_loop(controller, hysteresis):
+
+    global climate_state
 
     values = get_current_recipe_step_values('air_temperature', ('low_limit', 'high_limit'))
-    heater_on = None
 
-    if values != None:
-        # TODO  Need to set the temperature gap based upon the controllers abilities. The FCV1 temperature sensor
-        #       is not that accurate so to avoid the heater going and off we enforce a minimal difference of 2.
-        #       The reason the recipe can specify different values is to allow people to set wide ranges so that
-        #       they don't need to use their heater a lot if that is their desire.
-        if values ['high_limit'] - values['low_limit'] >= 2:
+    if values == None:
+        # No recipe file settings for air temperature so turn the heater off if it is running, otherwise do nothing.
+        logger.info('No air temperature recipe instructions found')
+        if climate_state['air_heater_on']:
+            logger.info('Turning the heater off.')
+            climate_state['air_heater_last_off_time'] = climate_state['cur_time']
+            controller['cmd']('off', 'air_heat')
+        return
 
-            mid_val_temp = (values ['high_limit'] + values['low_limit'])/2.0 
+    # Don't heat unless the low limit is at least 1 C less than the high limit. This is to make sure the heater and
+    # cooler don't fight each other.
+    #
+    if values ['high_limit'] - values['low_limit'] >= 1:
 
-            if climate_state['cur_air_temp'] != None:
-                if climate_state['cur_air_temp'] < values['low_limit'] and not climate_state['air_heater_on']:
-                    heater_on = True
-                elif climate_state['cur_air_temp'] > (values['low_limit'] + mid_val_temp) and\
-                     climate_state['air_heater_on']:
-                    heater_on = False
+        if climate_state['cur_air_temp'] != None:
+            if climate_state['cur_air_temp'] < values['low_limit'] - hysteresis:
+                heater_on = True
+            elif climate_state['cur_air_temp'] > values['low_limit']: 
+                heater_on = False
             else:
-                logger.warning('No air temperature avaialble. Will turn heater off.')
-                heater_on = False 
+                heater_on = climate_state['air_heater_on']
         else:
-            if climate_state['log_cycle']: 
-                logger.error('Illegal values for high and low limits. High limit must be ' +\
-                             'at least 2 degrees Celsius higher than low limit.')
-
+            logger.warning('No air temperature avaialble. Will turn heater off.')
+            heater_on = False 
     else:
+        if climate_state['log_cycle']: 
+            logger.error('Illegal values for high and low limits. High limit must be ' +\
+                         'at least 1 degrees Celsius higher than low limit.')
         heater_on = False
-        logger.info('No air temperature instructions found')
 
     # Don't run the heater for more than 30 minutes.
     if climate_state['air_heater_on']:
         if climate_state['air_heater_last_on_time'] != None and\
-           climate_state['cur_time'] - climate_state['air_heater_last_on_time'] > 30 * 60:
+            climate_state['cur_time'] - climate_state['air_heater_last_on_time'] > 30 * 60:
 
             heater_on = False
 
-    # If the last run was for over 29 minutes then let the heater rest for 5 minutes
+    # If the previous heater on period was greater than 29 minutes then leave the heater off for
+    # 10 minutes
     if not climate_state['air_heater_on']:
         if (climate_state['air_heater_last_off_time'] != None and\
             climate_state['air_heater_last_on_time'] != None) and\
            (climate_state['air_heater_last_off_time'] - climate_state['air_heater_last_on_time']  > 29 * 60) and\
-           (climate_state['cur_time'] - climate_state['air_heater_last_off_time']) < 5 * 60: 
+           (climate_state['cur_time'] - climate_state['air_heater_last_off_time']) < 10 * 60: 
            
             heater_on = False
+            
+    if heater_on == None:
+        logger.error('air heating logic did not set a heater_on value')
+        heater_on = False
 
-    if heater_on != None:
-        if heater_on:
+    if heater_on and not climate_state['air_heater_on']:
+        # Don't turn the heater on more than once per minute.
+        if climate_state['air_heater_last_on_time'] == None or\
+           climate_state['cur_time'] - climate_state['air_heater_last_on_time'] >= 60: 
+               
+            logger.info('turning the air heater on')
+            climate_state['air_heater_on'] = True
+            climate_state['air_heater_last_on_time'] = climate_state['cur_time']
+            controller['cmd']('on', 'air_heat')
 
-            # Don't turn the heater on more than once per minute.
-            if climate_state['air_heater_last_on_time'] == None or\
-               climate_state['cur_time'] - climate_state['air_heater_last_on_time'] >= 60: 
-                   
-                logger.info('turning the air heater on')
-                climate_state['air_heater_on'] = True
-                climate_state['air_heater_last_on_time'] = climate_state['cur_time']
-                controller['cmd']('on', 'air_heat')
+    if not heater_on and climate_state['air_heater_on']:
+        logger.info('turning the air heater off')
+        climate_state['air_heater_on'] = False 
+        climate_state['air_heater_last_off_time'] = climate_state['cur_time']
+        controller['cmd']('off', 'air_heat')
+
+def run_cooling_loop(hw_int, hysteresis) -> bool:
+    """ cooling controller that uses the vent fan """
+
+    global climate_state
+
+    values = get_current_recipe_step_values('air_temperature', ('low_limit', 'high_limit'))
+
+    if values == None:
+        # No air temperature settings in recipe file so turn the cooling off if it is running, otherwise do nothing.
+        logger.info('No air temperature instructions found. Cooler wants vent fan off.')
+        return False
+
+    cooler_on = False
+
+    # Don't cool unless the low limit is 1 C less than the high limit. This is to make sure the heater and
+    # cooler don't fight each other.
+    #
+    if values['high_limit'] - values['low_limit'] >= 1:
+
+        if climate_state['cur_air_temp'] != None:
+            if climate_state['cur_air_temp'] >= values['high_limit'] + hysteresis:
+                cooler_on = True
+            elif climate_state['cur_air_temp'] < values['high_limit']:
+                cooler_on = False
+            else:
+                cooler_on = climate_state['air_cooler_on'] 
         else:
-            logger.info('turning the air heater off')
-            climate_state['air_heater_on'] = False 
-            climate_state['air_heater_last_off_time'] = climate_state['cur_time']
-            controller['cmd']('off', 'air_heat')
+            logger.warning('air cooling loop: No air temperature avaialble. Will turn cooling off.')
+            cooler_on  = False 
+    else:
+        if climate_state['log_cycle']: 
+            logger.error('cooling loop: Illegal values for high and low limits. High limit must be ' +\
+                         'at least 2 degrees Celsius higher than low limit.')
+        cooler_on = False
+
+    if cooler_on == None:
+        logger.error('air cooling logic did not set a cooler_on value')
+        cooler_on = False
+
+    # Turn the cooler on/off if need be.
+    if cooler_on and not climate_state['air_cooler_on']:
+        logger.info('Turning the air cooler on.')
+        climate_state['air_cooler_on'] = True
+        climate_state['air_cooler_last_on_time'] = climate_state['cur_time']
+    if not cooler_on and climate_state['air_cooler_on']:
+        logger.info('Turning the air cooler off.')
+        climate_state['air_cooler_on'] = False
+        climate_state['air_cooler_last_off_time'] = climate_state['cur_time']
+
+    return cooler_on 
+
+# TODO: Need to make the air temp function adaptible so that it knows to use the vent fan if there is no 
+# heater.  Then if it uses the vent fan the cc needs to look at both the vent fan and the air temp fucntion
+# to see if either wants it on.
+def run_air_flush_and_cooling_loop(hw_int, hysteresis: int):
+
+    global climate_state
+
+    # Vent fan is shared for the purposes of honoring the climate recipe instructions for
+    # air temperature and air flushes.
+    cooling_on = run_cooling_loop(hw_int, hysteresis)
+    flush_on = run_air_flush_loop(hw_int)
+
+    #- logger.info('cooling on: {}'.format(cooling_on))
+    #- logger.info('flush on: {}'.format(flush_on))
+
+    if (cooling_on or flush_on) and not climate_state['vent_fan_on']:
+        logger.info('turning vent fan on')
+        climate_state['vent_fan_on'] = True
+        climate_state['vent_fan_last_on_time'] = climate_state['cur_time']
+        hw_int['cmd']('on', 'vent_fan')
+
+    if (not cooling_on and not flush_on) and climate_state['vent_fan_on']:
+        logger.info('turning vent fan off')
+        climate_state['vent_fan_on'] = False
+        climate_state['vent_fan_last_off_time'] = climate_state['cur_time']
+        hw_int['cmd']('off', 'vent_fan')
 
 
 def get_phase_index(cur_day_index, phases):
@@ -492,6 +626,8 @@ def get_phase_index(cur_day_index, phases):
 
 def update_climate_state(min_log_period, controller):
 
+    global climate_state
+    
     now = datetime.datetime.now()
     
     climate_state['cur_min'] = now.minute
@@ -524,21 +660,25 @@ def update_climate_state(min_log_period, controller):
 
 def start(app_state, args, barrier):
 
+    global climate_state
+
     logger.setLevel(args['log_level'])
     logger.info('starting climate controller thread')
 
     # Inject this resources commands into app_state
     app_state[args['name']] = {}
-    app_state[args['name']]['help'] = make_help(args['name']) 
-    app_state[args['name']]['state'] = show_state
-    app_state[args['name']]['recipe'] = show_recipe
     app_state[args['name']]['cmd'] = make_cmd(args)
+    app_state[args['name']]['help'] = make_help(args['name']) 
+    app_state[args['name']]['recipe'] = show_recipe
+    app_state[args['name']]['state'] = show_state
 
     init_state(args)
 
     # Don't proceed until all the other resources are available.
     barrier.wait()    
 
+    # by convention we expect a standard fopd hardware interface to exist.
+    hw_int = app_state[args['hardware_interface']]
 
     while not app_state['stop']:
 
@@ -547,15 +687,20 @@ def start(app_state, args, barrier):
        try:
            if climate_state['run_mode'] == 'on': 
 
-               update_climate_state(args['min_log_period'], app_state[args['hardware_interface']])
+               update_climate_state(args['min_log_period'], hw_int)
 
-               check_circ_fan(app_state[args['hardware_interface']])
+               if args['has_circ_fan_control']:
+                   check_circ_fan(hw_int)
 
-               check_lights(app_state[args['hardware_interface']])
+               check_lights(hw_int)
 
-               check_vent_fan(app_state[args['hardware_interface']])
-               
-               check_air_temperature(app_state[args['hardware_interface']])
+               if args['has_air_heater_control']:
+                   run_heating_loop(hw_int, args['hysteresis'])
+
+               # The vent is used for air cooling as well as for air flushes. 
+               # If either the cooler or the air flusher wants the vent fan on then
+               # turn it on.
+               run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
 
            # Every once in a while write the state to the state file to make sure the file 
            # stays up to date.  TBD: A more sophisticated system would write only when
@@ -565,6 +710,7 @@ def start(app_state, args, barrier):
 
        finally:
            state_lock.release()
+
 
        sleep(1)
 

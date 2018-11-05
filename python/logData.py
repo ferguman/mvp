@@ -5,30 +5,11 @@ import requests
 import json
 
 #- from config.config import log_data_to_local_couchdb, log_data_to_local_file
-from config.config import local_couchdb_url
+from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+from python.nacl_fop import decrypt
 from python.logger import get_sub_logger 
 
 logger = get_sub_logger(__name__)
-
-""" -
-def need_to_log_locally():
-    return log_data_to_local_couchdb or log_data_to_local_file
-"""
-""" -
-# Log data to couchdb and/or file or neither.
-#
-
-def logData(sensor_name, status, attribute, subject, value, units, comment):
-
-    # Need to factor out the next call.    
-   timestamp = '{:%Y-%m-%d %H:%M:%S}'.format(datetime.now())
-
-   if log_data_to_local_file == True:
-       logFile(timestamp, sensor_name, status, attribute, value, comment)
-
-   if log_data_to_local_couchdb == True:
-       logDB(timestamp, sensor_name, status, attribute, value, comment)
-"""
 
 # TBD - Need to make add capability to system to log to a file.
 def logFile(timestamp, name, status, attribute, value, comment):
@@ -45,13 +26,7 @@ def logFile(timestamp, name, status, attribute, value, comment):
     except:
         logger.error('Error writing to data file: {}'.format(exc_info()[0]))
 
-"""
-For reference here is the format of r (i.e a sensor reading):
 
-    {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-     'subject':'air', 'subject_location_id':args['air_location_id'], 
-     'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None}
-"""
 def logDB(r, comment=''):
 
     log_record = {'timestamp' : r['ts'],
@@ -78,6 +53,10 @@ def logDB(r, comment=''):
     """
 
     try:
-        result = requests.post(local_couchdb_url, data = json_data, headers=headers)
+        r = requests.post(local_couchdb_url, data = json_data, headers=headers, 
+                          auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
+                                decrypt(couchdb_password_b64_cipher).decode('utf-8')))
+        if r.status_code != 201:
+            logger.error('local couchdb return an error code: {}, {}...'.format(r.status_code, r.text[0:100]))
     except:
-        logger.error('cannot post data to the local couchdb')
+        logger.error('cannot post data to the local couchdb: {}, {}'.format(exc_info()[0], exc_info()[1]))

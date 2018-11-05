@@ -16,7 +16,7 @@
       "time_units" : "hours",
       "step":
         { "air_temperature": [
-            {"start_time": 0, "end_time": 23, "high_limit":19, "low_limit": 16}],
+            {"start_time": 0, "end_time": 23, "high_limit":29, "low_limit": 16}],
           "light_intensity": [
             {"start_time": 8, "end_time": 15, "value": 1},
             {"start_time": 16, "end_time": 23, "value": 0}],
@@ -29,7 +29,7 @@
       "time_units" : "hours",
       "step":
         { "air_temperature": [
-            {"start_time": 0, "end_time": 23, "high_limit":19, "low_limit": 16}],
+            {"start_time": 0, "end_time": 23, "high_limit":29, "low_limit": 16}],
           "light_intensity": [
             {"start_time": 0, "end_time": 10, "value": 1},
             {"start_time": 11, "end_time": 16, "value": 0},

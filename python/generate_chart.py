@@ -5,6 +5,8 @@ import requests
 import json
 from datetime import datetime
 
+from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+
 enable_display_unit_error_msg = None 
 
 # TODO: Current the system supports converting from celsius to fahrenheit. As the need arises
@@ -46,16 +48,17 @@ def generate_chart(couchdb_url, chart_info, logger):
 
     # Get the data from couch
     #
-    couch_query = couchdb_url + '_design/doc/_view/attribute_value?'\
+    couch_query = couchdb_url + '/_design/doc/_view/attribute_value?'\
                      + 'startkey=["{0}","{1}",{2}]&endkey=["{0}"]&descending=true&limit=60'.format(
                      chart_info['attribute'], chart_info['couchdb_name'], '{}')
                      
     logger.debug('prepared couchdb query: {}'.format(couch_query))
-    r = requests.get(couch_query)
+    r = requests.get(couch_query,
+                     auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
+                     decrypt(couchdb_password_b64_cipher).decode('utf-8')))
 
-    # TODO: the following prints out '<Response [200]>'. Need to wrap error checking around this call and suppress
-    # printing on "normal" operation. What about long web requests???
-    # print(r)
+
+    # TODO: need to add response code and error checking to make sure couchdb call worked ok.
 
     try:
         # TODO: Figure out why we need to reverse the list.  
@@ -80,4 +83,4 @@ def generate_chart(couchdb_url, chart_info, logger):
         line_chart.add(chart_info['data_stream_name'], v_lst)
         line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
     except:
-        logger.error('Chart generation failed: {}'.format(exc_info()[0]))
+        logger.error('Chart generation failed: {}, {}'.format(exc_info()[0], exc_info()[1]))
