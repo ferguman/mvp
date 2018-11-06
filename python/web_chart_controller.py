@@ -25,7 +25,7 @@ def start(app_state, args, b):
 
       this_ts = time()
 
-      if (this_ts - state['last_charting_ts'])/60 > args['charting_interval']:
+      if this_ts - state['last_charting_ts'] > args['charting_interval']:
 
          # Generate the charts
          # Figure out how the script directory is getting put in the path. Or in other words

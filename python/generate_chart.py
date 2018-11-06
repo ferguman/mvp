@@ -5,6 +5,8 @@ import requests
 import json
 from datetime import datetime
 
+from python.nacl_fop import decrypt
+
 from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 
 enable_display_unit_error_msg = None 
@@ -53,34 +55,38 @@ def generate_chart(couchdb_url, chart_info, logger):
                      chart_info['attribute'], chart_info['couchdb_name'], '{}')
                      
     logger.debug('prepared couchdb query: {}'.format(couch_query))
-    r = requests.get(couch_query,
-                     auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
-                     decrypt(couchdb_password_b64_cipher).decode('utf-8')))
-
-
-    # TODO: need to add response code and error checking to make sure couchdb call worked ok.
-
+    
     try:
-        # TODO: Figure out why we need to reverse the list.  
-        global enable_display_unit_error_msg
-        enable_display_unit_error_msg = True
-        #- v_lst = [float(x['value']['value']) for x in r.json()['rows']]
-        v_lst = [float(apply_unit_conversion(x, chart_info)) for x in r.json()['rows']]
-        #- v_lst.reverse()
-        ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p') for x in r.json()['rows']]
-        ts_lst.reverse()
+        r = requests.get(couch_query,
+                         auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
+                         decrypt(couchdb_password_b64_cipher).decode('utf-8')))
 
-        # line_chart = pygal.Line(interpolate='cubic')
-        line_chart = pygal.Line()
-        line_chart.title = chart_info['chart_title'] #'Temperature'
-        line_chart.y_title= chart_info['y_axis_title'] #"Degrees C"
-        line_chart.x_title= chart_info['x_axis_title'] #"Timestamp (hover over to display date)"
-        line_chart.x_labels = ts_lst
 
-        #need to reverse order to go from earliest to latest
-        v_lst.reverse()
+        # TODO: need to add response code and error checking to make sure couchdb call worked ok.
+        if r.status_code != 200: 
+            logger.error('local couchdb return an error code: {}, {}...'.format(r.status_code, r.text[0:100]))
+        else:
 
-        line_chart.add(chart_info['data_stream_name'], v_lst)
-        line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
+            # TODO: Figure out why we need to reverse the list.  
+            global enable_display_unit_error_msg
+            enable_display_unit_error_msg = True
+            #- v_lst = [float(x['value']['value']) for x in r.json()['rows']]
+            v_lst = [float(apply_unit_conversion(x, chart_info)) for x in r.json()['rows']]
+            #- v_lst.reverse()
+            ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p') for x in r.json()['rows']]
+            ts_lst.reverse()
+
+            # line_chart = pygal.Line(interpolate='cubic')
+            line_chart = pygal.Line()
+            line_chart.title = chart_info['chart_title'] #'Temperature'
+            line_chart.y_title= chart_info['y_axis_title'] #"Degrees C"
+            line_chart.x_title= chart_info['x_axis_title'] #"Timestamp (hover over to display date)"
+            line_chart.x_labels = ts_lst
+
+            #need to reverse order to go from earliest to latest
+            v_lst.reverse()
+
+            line_chart.add(chart_info['data_stream_name'], v_lst)
+            line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
     except:
         logger.error('Chart generation failed: {}, {}'.format(exc_info()[0], exc_info()[1]))

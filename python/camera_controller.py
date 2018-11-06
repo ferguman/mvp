@@ -15,7 +15,7 @@ logger = get_sub_logger(__name__)
 
 camera_lock = Lock()
 
-def snap(repl, pose_on_cmd, pose_off_cmd) -> 'file_path':
+def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fop command') -> 'file_path':
 
     # Wait for camera to become available.
     camera_lock.acquire()
@@ -79,6 +79,7 @@ def snap(repl, pose_on_cmd, pose_off_cmd) -> 'file_path':
         # Tell the light controller to go back to it's normal operation
         repl(pose_off_cmd)
 
+"""- 
 def make_snap(repl, pose_on_cmd, pose_off_cmd):
 
     def snap_cmd():
@@ -86,7 +87,7 @@ def make_snap(repl, pose_on_cmd, pose_off_cmd):
         return lambda : snap(repl, pose_on_cmd, pose_off_cmd)
 
     return snap_cmd
-
+"""
 
 def make_help(args):
     
@@ -96,10 +97,52 @@ def make_help(args):
 
         s =     '{}.help()                 - Displays this help page.\n'.format(prefix)
         s = s + "{}.snap()                 - Takes a picture and returns the location of the file.\n".format(prefix)
+        s = s + "{}.show_subs()            - Display a list of the Camera Subscribers.\n".format(prefix)
+        s = s + "{}.update(sub)            - Takes a picture and sends it to the subscriber indicated by target.\n".format(prefix)
+        s = s + "                          - Example: {}.update('LocalWebServer')".format(prefix)
         
         return s
 
     return help
+
+def make_update(app_state, args, camera_subscribers: list):
+
+    def update(sub):
+        logger.info('got here')
+
+        for s in camera_subscribers:
+            if s.name.lower() == sub.lower():          
+                file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+                if file_location == None:
+                    return 'Cannot take a picture'
+                s.new_picture(file_location)
+                return 'OK'
+
+        return 'Cannot find the subscriber. Try running {}.show_subs()'.format(args['name'])
+
+    return update
+
+
+def make_show_subs(camera_subscribers):
+
+    def show_subs():
+        s = ''
+        if len(camera_subscribers) > 0:
+            for sub in camera_subscribers:
+                s = s + '{}\n'.format(sub.name)
+            return s
+        else:
+            return 'there are no camera subscribers\n'
+
+    return show_subs
+""" - 
+def make_update(app_state, config_args):
+
+    def update(sub):
+        return 'Hello: {}'.format(sub)
+
+    return update
+"""
 
 def start(app_state, args, b):
 
@@ -113,9 +156,9 @@ def start(app_state, args, b):
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    # TODO - You can't use app_state['sys']['cmd'] tills it's initialized or can you?
-
     app_state[args['name']]['snap'] = lambda: snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+    app_state[args['name']]['show_subs'] = make_show_subs(camera_subscribers) 
+    app_state[args['name']]['update'] = make_update(app_state, args, camera_subscribers) 
 
     # Don't proceed until all the other threads are up and ready.
     b.wait()    

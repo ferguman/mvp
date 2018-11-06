@@ -10,6 +10,7 @@ class CameraSubscriber():
 
     def __init__(self, **kwargs):
 
+        #TODO - make as many as possible of the variables below private e.g. __regix
         self.regex = re.compile(kwargs.get('frequency'))
 
         self.posting_url = kwargs.get('url')
@@ -19,6 +20,9 @@ class CameraSubscriber():
 
         self.in_scheduled_picture_window = False
         self.device_id = kwargs.get('device_id')
+
+        # Public properties
+        self.name = kwargs.get('name')
 
     def wants_picture(self, time_stamp, startup_flag):
 

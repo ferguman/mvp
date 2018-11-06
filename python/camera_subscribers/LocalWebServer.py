@@ -8,6 +8,7 @@ from sys import exc_info
 class LocalWebServer(CameraSubscriber):
 
     def new_picture(self, file_location):
+
        try:
           current_image_copy_location = getcwd() + self.destination_dir + 'image.jpg'
           CameraSubscriber.logger.info('updating local web site picture')
