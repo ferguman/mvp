@@ -1,0 +1,5 @@
+function(doc) {
+   if(doc.value && doc.attribute && doc.status == 'Success'){
+      emit([doc.attribute, doc.name, doc.timestamp], doc);
+   }
+}
