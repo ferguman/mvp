@@ -42,13 +42,10 @@ div.tab button.active {
 </style>
 <head>
 <title>Grow Device Dashboard</title>
-<meta http-equiv="refresh" content="3600">
+
+
 </head>
-<body>
-<! TODO: research adding a tag that tells the browser not to cache stuff. Since you are using the ?ts trick 
-         to get around browser caching you might as well tell the browser not to cache so it doesn't waste memory saving 
-         content that will never be fetched from the cache. !>
-<! top level Vue instance !>
+<body onload="openTab(event, 'Charts');">
 <div id="fopdw">
 
 <div class="tab">
@@ -62,24 +59,20 @@ div.tab button.active {
 </div>
 
 <div id="Charts" class="tabcontent">
-  <h3>Charts</h3>
+      <p>Chart data is typically updated evey 20 mintues. Click
+      <button v-on:click="update_charts">update</button> to refresh the charts.</p>
   (% for chart in chart_list: %)
       <object type="image/svg+xml" v-bind:data="(( chart['vue_name'] ))">
           "Your browser does not support SVG
       </object>
   (% endfor %)
-      <button v-on:click="update_charts">update</button>
       
 </div>
 
 <div id="Camera" class="tabcontent">
-  <h3>Camera</h3>
-    <p>
-    <span v-bind:title="message">
-	    <img v-bind:src="image" alt="Latest image" style="width:640px;height:480px;">
-	    <button v-on:click="update_image">update</button>
-    </span>
-     </p>
+   <p>Images are typically updated once per day. Click
+   <button v-on:click="update_image">update</button> to refresh the image.</p>
+   <img v-bind:src="image" alt="Latest image" style="width:720px">
 </div>
 
 <div id="Status" class="tabcontent">
@@ -94,21 +87,11 @@ div.tab button.active {
 </div>
 
 <div id="About" class="tabcontent">
-<h3>About</h3>
-<p>The MVP (Minimal Viable Product) is a low cost, hydroponic growth chamber; designed as a simplified version of the <a target="_blank" href="https://www.media.mit.edu/groups/open-agriculture-openag/overview">MIT OpenAg Personal Food Computer</a>.  While this is a working hydroponic environment, the focus in on collecting research data.  This is an open source project based around a Raspberry Pi 'brain' and Python code, with a CouchDB repository.</p>
-<p>Documentation is on the <a target="_blank" href="https://wiki.openag.media.mit.edu/mvp_1">MIT OpenAg Wiki</a></p>
-<p>Discussion is on the <a target="_blank" href="http://forum.openag.media.mit.edu">MIT OpenAg Forum</a></p>
-<p>Code is sourced on <a target="_blank" href="https://github.com/webbhm">Github</a></p>
-<p/>
-<h3>Release Version</h3>
-<p>Blossom</p>
-<h3>A special thanks to the early testers of the MVP</h3>
-   <ul>
-   <li>Melanie Shimano</li>
-   <li>Phil Speth</li>
-   <li>Drew Thomas</li>
-   <li>Peter Webb</li>
-   </ul>
+
+<p><b>Release Version:</b>Blossom</p>
+<p>
+This is open source software.  Source code is available at the <a target="_blank" href="https://github.com/ferguman/fopd">Farm Operation Device</a> repository.
+</p>
 </div>
 
 <! end of Vue application !>
@@ -128,26 +111,26 @@ var app = new Vue({
 (% endfor %)
     },
     methods: {
-        update_image: function() {
+        update_image: function(event) {
             this.image = "/static/image.jpg?" + new Date().getTime();
 	},
-        update_charts: function() {
+        update_charts: function(event) {
 (% for chart in chart_list: %)
             this.((chart['vue_name'])) = "(( url_for('static', filename = chart['chart_file_name']) ))?" + new Date().getTime();
 (% endfor %)
 	},
-	update_status: function() {
+	update_status: function(event) {
 	    
 	},
-        open_image_tab: function() {
+        open_image_tab: function(event) {
 	    openTab(event, 'Camera');
 	    this.update_image();
         },
-        open_charts_tab: function() {
+        open_charts_tab: function(event) {
 	    openTab(event, 'Charts');
 	    this.update_charts();
         },
-        open_status_tab: function() {
+        open_status_tab: function(event) {
 	    openTab(event, 'Status');
 	    this.update_status();
         }

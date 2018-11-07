@@ -1,4 +1,4 @@
-from flask import Flask, render_template, __version__
+from flask import Flask, render_template, __version__, make_response
 
 class fopdwFlask(Flask):
 
@@ -24,7 +24,10 @@ app_state = None
 
 @app.route('/')
 def home():
-    return render_template('home.html', chart_list=app_state['sys']['chart_list'])
+
+    resp = make_response(render_template('home.html', chart_list=app_state['sys']['chart_list']))
+    resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
+    return resp
 
 def run_flask(state):
 

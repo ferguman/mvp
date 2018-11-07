@@ -42,11 +42,7 @@ def apply_unit_conversion(val_tree, chart_info):
     else:
         return val_tree['value']['value']
 
-#Use a view in CouchDB to get the data
-#use the first key for attribute type
-#order descending so when limit the results will get the latest at the top
-
-def generate_chart(couchdb_url, chart_info, logger):
+def get_chart_data(couchdb_url, chart_info, logger):
 
     # Get the data from couch
     #
@@ -54,39 +50,62 @@ def generate_chart(couchdb_url, chart_info, logger):
                      + 'startkey=["{0}","{1}",{2}]&endkey=["{0}"]&descending=true&limit=60'.format(
                      chart_info['attribute'], chart_info['couchdb_name'], '{}')
                      
-    logger.debug('prepared couchdb query: {}'.format(couch_query))
+    # logger.debug('prepared couchdb query: {}'.format(couch_query))
     
     try:
         r = requests.get(couch_query,
                          auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
                          decrypt(couchdb_password_b64_cipher).decode('utf-8')))
 
-
-        # TODO: need to add response code and error checking to make sure couchdb call worked ok.
         if r.status_code != 200: 
             logger.error('local couchdb return an error code: {}, {}...'.format(r.status_code, r.text[0:100]))
+            return None
         else:
+            return r.json()
 
-            # TODO: Figure out why we need to reverse the list.  
+    except:
+        logger.error('Cannot connect to the local Couchdb instance: {}, {}'.format(exc_info()[0], exc_info()[1]))
+        return None
+
+
+# Use a view in CouchDB to get the data
+#use the first key for attribute type
+#order descending so when limit the results will get the latest at the top
+
+def generate_chart(couchdb_url, chart_info, logger):
+
+    logger.debug('generating web charts')
+
+    try:
+
+        data =  get_chart_data(couchdb_url, chart_info, logger)
+        if data:
+            
             global enable_display_unit_error_msg
             enable_display_unit_error_msg = True
-            #- v_lst = [float(x['value']['value']) for x in r.json()['rows']]
-            v_lst = [float(apply_unit_conversion(x, chart_info)) for x in r.json()['rows']]
-            #- v_lst.reverse()
-            ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p') for x in r.json()['rows']]
+            v_lst = [float(apply_unit_conversion(x, chart_info)) for x in data['rows']]
+
+            ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p')\
+                      for x in data['rows']]
             ts_lst.reverse()
 
             # line_chart = pygal.Line(interpolate='cubic')
-            line_chart = pygal.Line()
-            line_chart.title = chart_info['chart_title'] #'Temperature'
-            line_chart.y_title= chart_info['y_axis_title'] #"Degrees C"
-            line_chart.x_title= chart_info['x_axis_title'] #"Timestamp (hover over to display date)"
+            line_chart = pygal.Line(x_label_rotation=20, show_minor_x_labels=False)
+            line_chart.title = chart_info['chart_title']
+            line_chart.y_title= chart_info['y_axis_title']
+            line_chart.x_title= chart_info['x_axis_title']
+
             line_chart.x_labels = ts_lst
+            # Major label every 8'th time point
+            line_chart.x_labels_major = ts_lst[::8]
 
             #need to reverse order to go from earliest to latest
             v_lst.reverse()
 
             line_chart.add(chart_info['data_stream_name'], v_lst)
             line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
+
+        else:
+            logger.error('No chart data available')
     except:
         logger.error('Chart generation failed: {}, {}'.format(exc_info()[0], exc_info()[1]))
