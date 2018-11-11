@@ -2,7 +2,7 @@ from datetime import datetime
 from queue import Queue, Empty
 from subprocess import * 
 from sys import path, exc_info
-from time import sleep
+from time import sleep, time
 
 import paho.mqtt.client
 import paho.mqtt.client as mqtt
@@ -101,9 +101,27 @@ def make_mqtt_help(res_name):
 
     return mqtt_help
 
+
+def subscribe_for_commands(mqtt_client, device_id):
+
+    # TODO - Design substriction system and then complete it.
+    # Subscribe to the broker so commands can be received.
+    # QOS 2 = Exactly Once
+    try:
+       result = mqtt_client.subscribe('cmd/' + device_id, 2)
+       if result[0] == 0:
+           logger.info("MQTT subscription to topic foo/cmd requested")
+           # TBD: need to research what the following command does.
+           # mqtt_client.topic_ack.append([topic_list, result[1],0])
+       else:
+           logger.error('MQTT subcription (topic: {}) request failed'.format('cmd/' + device_id))
+    except Exception as e:
+        logger.error('Exception occurred while attempting to subscribe to MQTT: {}{}'.format(\
+                     exc_info()[0], exc_info()[1]))
+
+
 # Start the mqtt client and put a reference to it in app_state.
 # If you don't start the mqtt client then don't do anything but log a message. 
-#
 def start(app_state, args, b):
 
     logger.setLevel(args['log_level'])
@@ -113,87 +131,79 @@ def start(app_state, args, b):
 
     publish_queue = Queue()
     app_state[args['name']]['publish_queue'] = publish_queue
+    app_state[args['name']]['help'] = make_mqtt_help(args['name'])
 
     mqtt_client = None
 
     if args['enable']:
 
-        """ - 
-        pw = get_mqtt_password(app_state)
-
-        if pw is not None:
-            # Note that the paho mqtt client has the ability to spawn it's own thread.
-            # TBD - app_state is "too much" to give here. We need to figure out how to pare it down to
-            # app_state['sys']['cmd']
-            mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)[1]
-        """
-        
-        app_state[args['name']]['help'] = make_mqtt_help(args['name'])
-
+        last_client_start_attempt_time = time()
+        # TODO app_state is too much to gie here. figure out what the 
+        # the function needs and only give that.
+        # Note thgaty the pah mqtt cliern has the ability to spawn it's own thead.
         mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)
+        
+
+        if mqtt_client: 
+            subscribe_for_commands(mqtt_client, args['mqtt_client_id'])
 
         # Let the system know that you are good to go. 
         b.wait()
 
-        if mqtt_client: 
-            # TODO - Design substriction system and then complete it.
-            # Subscribe to the broker so commands can be received.
-            # QOS 2 = Exactly Once
-            try:
-               result = mqtt_client.subscribe("foo/cmd", 2)
-               if result[0] == 0:
-                   logger.info("MQTT subscription to topic foo/cmd requested")
-                   # TBD: need to research what the following command does.
-                   # mqtt_client.topic_ack.append([topic_list, result[1],0])
-               else:
-                   logger.error("MQTT subcription (topic foo/cmd) request failed")
-            except Exception as e:
-                logger.error('Exception occurred while attempting to subscribe to MQTT: {}{}'.format(\
-                             exc_info()[0], exc_info()[1]))
-
         while not app_state['stop']:
 
-            """
-            Queue.get(block=True, timeout=None)
-                Remove and return an item from the queue. If optional args block is true and timeout is None (the default), 
-                block if necessary until an item is available. If timeout is a positive number, it blocks at most timeout 
-                seconds and raises the Empty exception if no item was available within that time. Otherwise (block is false),
-                return an item if one is immediately available, else raise the Empty exception (timeout is ignored in that
-                case).
-            """
-            try:
-                item = publish_queue.get(False)
+            if mqtt_client:
 
+                """
+                Queue.get(block=True, timeout=None)
+                    Remove and return an item from the queue. If optional args block is true and timeout is None (the default), 
+                    block if necessary until an item is available. If timeout is a positive number, it blocks at most timeout 
+                    seconds and raises the Empty exception if no item was available within that time. Otherwise (block is false),
+                    return an item if one is immediately available, else raise the Empty exception (timeout is ignored in that
+                    case).
+                """
                 try:
+                    item = publish_queue.get(False)
 
-                    if not mqtt_client: 
-                        logger.error('there is no mqtt client available for published request: {}'.format(item[0]))
-                        continue
+                    try:
 
-                    if item[0] == 'sensor_reading':
-                        logger.info('publishing reading via mqtt')
-                        publish_sensor_reading(mqtt_client, args['organization_id'], item[1])
+                        if not mqtt_client: 
+                            logger.error('there is no mqtt client available for published request: {}'.format(item[0]))
+                            continue
 
-                        # Bypass the sleep command in order to keep draining the queue in real time.
-                        continue
+                        if item[0] == 'sensor_reading':
+                            logger.info('publishing reading via mqtt')
+                            publish_sensor_reading(mqtt_client, args['organization_id'], item[1])
 
-                    if item[0] == 'cmd_response': 
-                        logger.info('publishing commmand response via mqtt')
-                        publish_cmd_response(mqtt_client, args['organization_id'], item[1]) 
+                            # Bypass the sleep command in order to keep draining the queue in real time.
+                            continue
 
-                        # Bypass the sleep command in order to keep draining the queue in real time.
-                        continue
-                   
-                    else:
-                        logger.error('unknown mqtt publish item encountered: {}'.format(item[0]))
+                        if item[0] == 'cmd_response': 
+                            logger.info('publishing commmand response via mqtt')
+                            publish_cmd_response(mqtt_client, args['organization_id'], item[1]) 
 
-                except Exception as e:
-                    logger.error('exception occurred in main loop of MQTT thread: {}{}'.format(\
-                                 exc_info()[0], exc_info()[1]))
-           
-            except Empty:
-                # This is ok. It just means the publish queue is empty.
-                pass
+                            # Bypass the sleep command in order to keep draining the queue in real time.
+                            continue
+                       
+                        else:
+                            logger.error('unknown mqtt publish item encountered: {}'.format(item[0]))
+
+                    except Exception as e:
+                        logger.error('exception occurred in main loop of MQTT thread: {}{}'.format(\
+                                     exc_info()[0], exc_info()[1]))
+               
+                except Empty:
+                    # This is ok. It just means the publish queue is empty.
+                    pass
+            else:
+                # attempt to create a client if we don't have one but don't do it every second
+                if  time() - last_client_start_attempt_time >= args['client_create_retry_interval']: 
+                    last_client_start_attempt_time = time()
+                    mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)
+                    
+                    if mqtt_client: 
+                        subscribe_for_commands(mqtt_client, args['mqtt_client_id'])
+
             
             sleep(1)
 

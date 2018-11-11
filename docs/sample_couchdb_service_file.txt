@@ -4,7 +4,6 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-RuntimeDirectory=/home/couchdb/couchdb
 User=couchdb
 ExecStart=/home/couchdb/couchdb/bin/couchdb
 Restart=on-failure

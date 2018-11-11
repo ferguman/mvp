@@ -175,7 +175,10 @@ def start(app_state, args, b):
                     if file_location == None:
                         logger.error('Cannot take a picture')
                         break
-                s.new_picture(file_location)
+                try:
+                   s.new_picture(file_location)
+                except:
+                   logger.error('camera subscriber exception occured: {}, {}'.format(exc_info()[0], exc_info()[1]))
 
         # TODO - put in code to delete any picture files that were created. Keep in mind that this assumes that 
         #        the s's above don't return from the new_picture method till they are done with the file.  A 
