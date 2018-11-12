@@ -43,4 +43,5 @@ def start(state, args, barrier):
 
     # Start the Flask application. Note: app.run does not return.
     # run Flask.  Note: this function does not return.
-    app.run(host='127.0.0.1')
+    #- app.run(host='127.0.0.1')
+    app.run(host=args['host'], port=args['port'])
