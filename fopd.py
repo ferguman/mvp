@@ -7,23 +7,6 @@
 #   Note: pythone3 mvp.py --help  -> Will display available command line arguments.
 #
 # or run the program at startup as a systemd service using the following service file contents:
-# edited to fit your particular situation.
-"""
-[Unit]
-Description=fopd
-Wants=network-online.target
-After=network-online.target
-
-[Service]
-WorkingDirectory=/home/pi/fopd
-User=pi
-ExecStart=/home/pi/fopd/venv/bin/python  /home/pi/fopd/fopd.py --silent
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-"""
-#
 # Notes on systemd
 #
 # 1) If your program uses a virtual environment then use the python located in the virtual environment bin folder.
@@ -39,8 +22,6 @@ WantedBy=multi-user.target
 # It is assumed that mvp.py is located in a directory that contains code and data organized
 # identical to the way it is stored in github (https://github.com/ferguman/fopd)
 # 
-
-# Ok let's get started!
 
 # Make sure we are running a compatible version of python.
 from check_python_version import check_python_version
@@ -61,7 +42,7 @@ import threading
 
 # Load mvp libraries
 from config.config import system
-from web.flask_app import run_flask 
+#- from web.flask_app import run_flask 
 from python.args import get_args
 from python.repl import start
 
@@ -88,28 +69,23 @@ for r in system['resources']:
 
     m = import_module(r['imp'])
 
-    tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
+    if 'daemon' in r:
+        tl.append(threading.Thread(target=m.start, daemon=r['daemon'], name=r['args']['name'], args=(app_state, r['args'], b)))
+    else:
+        tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
 # start the built in REPL interpretter.
-#- if not args.silent:
-#- tl.append(threading.Thread(target=repl, name='repl', args=(app_state, args.silent)))
 tl.append(threading.Thread(target=start, name='repl', args=(app_state, args.silent)))
 
 # Start all threads
 for t in tl:
     t.start()
     
-# TODO: Consider running the CherryPy web server (instead of the Werkzeug server) as
-#       the front end to Flask. If CherryPy can run as a seperate thread then this
-#       main thread could stop the server. See flask.pocoo.org/snippets/24/ for further
-#       details.
-# Start the Flask application
-#
-run_flask(app_state)
+logger.info('fopd startup complete')
 
-app_state['stop'] = True
-
-# Wait for threads to complete.
-#
+# Wait for non-daemon threads to complete.
 for t in tl:
-    t.join()
+    if not t.isDaemon():
+        t.join()
+
+logger.info('fopd shutdown complete')

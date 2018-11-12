@@ -20,7 +20,7 @@ app.logger.info('starting Flask version {}'.format(__version__))
 
 # TODO: I don't see the need for keeping a local reference to app_state. See
 #       if you can remove this stuff.
-app_state = None
+#- app_state = None
 
 @app.route('/')
 def home():
@@ -29,14 +29,18 @@ def home():
     resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
     return resp
 
-def run_flask(state):
+def start(state, args, barrier):
+
+    # TODO: Try moving the app instantiation adn the route functions into this routine. That will
+    #       move the app_state to a local variable.
 
     # take up the app_state from the caller
     global app_state
     app_state = state 
 
-    state['sys']['flask_app'] = app
+    # Tell all the other threads that you are ready to go.
+    barrier.wait()
 
+    # Start the Flask application. Note: app.run does not return.
     # run Flask.  Note: this function does not return.
-    # TODO: Figure out how to gracefully shut down Flask
-    app.run(host='0.0.0.0')
+    app.run(host='127.0.0.1')
