@@ -1,6 +1,7 @@
 import threading
 import smbus2
-import sys
+
+from sys import exc_info
 from time import sleep, time
 
 from python.logger import get_sub_logger 
@@ -18,6 +19,11 @@ class si7021(object):
         self.config = config
 
         self.init_sensor_value_list(vals)
+
+        # Store the time of occurence and error count for each type of error that has the potential to flood
+        # the log file. 
+        humidity_read_error_id = 0
+        temp_read_error_id = 1
 
         logger.info('i2c sensor si7021. Providing air temperature and humidity. Will use i2c addr {}'.format(address)) 
 
@@ -53,10 +59,21 @@ class si7021(object):
 
            ts = time()
 
-           self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(self.getHumidity())
+           h = self.getHumidity()
+           if h:
+               #- self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(self.getHumidity())
+               self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(h)
+           else:
+               self.vals[self.humidity_val_index]['value'] = None
+ 
            self.vals[self.humidity_val_index]['ts'] = ts 
 
-           self.vals[self.temperature_val_index]['value'] = '{:+.1f}'.format(self.getTempC())
+           t = self.getTempC()
+           if t:
+               self.vals[self.temperature_val_index]['value'] = '{:+.1f}'.format(t)
+           else:
+               self.vals[self.temperature_val_index]['value'] = None
+
            self.vals[self.temperature_val_index]['ts'] = ts 
 
 
@@ -79,21 +96,23 @@ class si7021(object):
         self.bus.write_byte(address, command)
 
     def getHumidity(self):
-        #- lock = threading.Lock()
-        #- with lock:
-        self.write(rh_no_hold)
-        sleep(0.03)
-        percent_rh = self.read_word()
-        percent_rh = 125.0/65536.0*percent_rh-6.0
-        return percent_rh
+        try: 
+            self.write(rh_no_hold)
+            sleep(0.03)
+            percent_rh = self.read_word()
+            percent_rh = 125.0/65536.0*percent_rh-6.0
+            return percent_rh
+        except:
+            logger.error('cannot read humidity from sensor: {}, {}'.format(exc_info()[0], exc_info()[1]))
 
     def getTempC(self):
-        #- lock = threading.Lock()
-        #- with lock:
-        self.write(previous_temp)
-        temp_c = self.read_word()
-        temp_c = 175.72/65536.0*temp_c-46.85
-        return temp_c
+        try:
+            self.write(previous_temp)
+            temp_c = self.read_word()
+            temp_c = 175.72/65536.0*temp_c-46.85
+            return temp_c
+        except:
+            logger.error('cannot read temperature from sensor: {}, {}'.format(exc_info()[0], exc_info()[1]))
 
     def Get(self, attribute: str) -> str:
        try:
@@ -105,7 +124,7 @@ class si7021(object):
           print('ERROR in si7021. Unknown attribute: {}'.format(attribute))
           return '0'
        except:
-          logger.error('Error in Get: {}'.format(sys.exc_info()[0]))
+          logger.error('Error in Get: {}'.format(exc_info()[0]))
 
     def test(self):
         'Self test of the object'

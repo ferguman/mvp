@@ -2,16 +2,18 @@
 #      a recipe on or off.  Add this functionality. Currenlty the state file is written out every state_file_write_interval
 #      seconds and when the program gracefully exits.
 
+from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 from os import path, getcwd
 from sys import exc_info
 from threading import Lock
 from time import sleep, time
+
 import datetime
 import json
-import time
+#- import time
 
 from python.logData import logDB
-from python.logger import get_sub_logger 
+from python.logger import get_sub_logger
 
 # Provide a lock to control access to the climate controller state
 #
@@ -20,8 +22,6 @@ state_lock = Lock()
 logger = get_sub_logger(__name__)
 
 # State variables:
-# 1) recipe
-# 2) run_mode: 'on' or 'off'
 climate_state = {} 
 
 # Load the recipe file found at rel_path and stick the JSON into climate_state['recipe']
@@ -72,11 +72,11 @@ def write_state_file(rel_path, update_interval: 'secs', force: bool):
 
     global climate_state
 
-    if force or (time.time() >= climate_state['last_state_file_update_time'] + update_interval):
+    if force or (time() >= climate_state['last_state_file_update_time'] + update_interval):
 
         # Go ahead and log the update time even though the file write is not done. This way
         # you want bang on the file system over and over in the presence of errors.
-        climate_state['last_state_file_update_time'] = time.time()
+        climate_state['last_state_file_update_time'] = time()
        
         try:
             state_file_path = getcwd() + rel_path
@@ -248,7 +248,7 @@ def init_state(args):
     # See if there is previous state in a state file  and load it if you have it, otherwise
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
-    climate_state['last_state_file_update_time'] = time.time()
+    climate_state['last_state_file_update_time'] = time()
 
     now = datetime.datetime.now()
     climate_state['cur_min'] = now.minute
@@ -476,7 +476,7 @@ def run_heating_loop(controller, hysteresis):
             else:
                 heater_on = climate_state['air_heater_on']
         else:
-            logger.warning('No air temperature avaialble. Will turn heater off.')
+            logger.warning('No air temperature available. Will turn heater off.')
             heater_on = False 
     else:
         if climate_state['log_cycle']: 
@@ -548,7 +548,8 @@ def run_cooling_loop(hw_int, hysteresis) -> bool:
             else:
                 cooler_on = climate_state['air_cooler_on'] 
         else:
-            logger.warning('air cooling loop: No air temperature avaialble. Will turn cooling off.')
+            log_if_log_cycle(WARNING, 'air cooling loop: No air temperature avaialble. Will turn cooling off.') 
+            #- logger.warning('air cooling loop: No air temperature avaialble. Will turn cooling off.')
             cooler_on  = False 
     else:
         if climate_state['log_cycle']: 
@@ -624,6 +625,14 @@ def get_phase_index(cur_day_index, phases):
         logger.error('cannot update phase index: {}, {}'.format(exc_info()[0], exc_info()[1]))
         return None
 
+
+def log_if_log_cycle(level, msg): 
+
+    global climate_state
+
+    if climate_state['log_cycle']:
+        logger.log(level, msg)
+
 def update_climate_state(min_log_period, controller):
 
     global climate_state
@@ -640,7 +649,7 @@ def update_climate_state(min_log_period, controller):
 
     climate_state['cur_phase_index'] = get_phase_index(climate_state['cur_day'], climate_state['recipe']['phases'])
 
-    climate_state['cur_time'] = time.time()   # Return the time in seconds since the epoch as a floating point number.
+    climate_state['cur_time'] = time()   # Return the time in seconds since the epoch as a floating point number.
 
     if climate_state['cur_time']  - climate_state['last_log_time'] >= min_log_period:   
         climate_state['last_log_time'] = climate_state['cur_time']
@@ -652,8 +661,9 @@ def update_climate_state(min_log_period, controller):
     try:
         climate_state['cur_air_temp'] = float(at)
     except:
-        if climate_state['log_cycle']:
-            logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
+        log_if_log_cycle(WARNING,'cannot read air temperature. value returned by source is {}'.format(at)) 
+        #- if climate_state['log_cycle']:
+        #-    logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
 
     # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
     #             climate_state['last_log_time'], climate_state['log_cycle']))
