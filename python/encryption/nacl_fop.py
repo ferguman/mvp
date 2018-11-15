@@ -2,7 +2,7 @@
 
 from base64 import standard_b64encode, standard_b64decode
 
-from nacl import secret
+from nacl import secret, utils
 
 from config.private_key import nsk_b64
 
@@ -19,9 +19,10 @@ def decrypt_dict_vals(d: dict, dict_keys_to_decrypt):
     new_dict = {}
     for key, val  in d.items():
         if key in dict_keys_to_decrypt:
-            #- new_dict[key] = decrypt(val)
             new_dict[key] = decrypt(val).decode('utf-8')
         else:
             new_dict[key] = val
 
     return new_dict
+
+

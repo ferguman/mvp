@@ -24,6 +24,14 @@ class CameraSubscriber():
         # Public properties
         self.name = kwargs.get('name')
 
+    def periodic_call(self):
+        """ The camera_controller will call this variable once per cycle from within it's control loop.
+            Typcially control loops run every second.  Override this method if you need this class to be
+            called periodically. For example if you are implementing a network transaction and need to be
+            able to do retries """
+
+        pass
+
     def wants_picture(self, time_stamp, startup_flag):
 
         if startup_flag and self.take_picture_on_start:

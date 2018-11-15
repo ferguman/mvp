@@ -11,7 +11,7 @@ from python.logger import get_sub_logger
 
 logger = get_sub_logger(__name__)
 
-from config.config import device_name, system
+#- from config.config import device_name, system
 
 cmd_lock = Lock()
 
@@ -44,11 +44,15 @@ def make_exit_mvp(app_state):
 
     return exit_mvp
 
-def sys_dir():
-    s = ''
-    for r in system['resources']:
-        s = s + '    name: {}, implementation -> {}\n'.format(r['args']['name'], r['imp'])
-    return s
+def make_sys_dir_cmd(system):
+
+    def sys_dir():
+        s = ''
+        for r in system['resources']:
+            s = s + '    name: {}, implementation -> {}\n'.format(r['args']['name'], r['imp'])
+        return s
+
+    return sys_dir
 
 cmd_re = re.compile(r'(([a-z_]{1,20}\.){0,5})[a-z_]{1,20}\(')
 cmd_parts_re = re.compile(r'([a-z_]{1,20}\.)|([a-z_]{1,20}\()')
@@ -88,12 +92,8 @@ def make_run_cmd(repl_globals, app_state):
         # Currently the system implements functions that cause this function to be re-entered. For
         # example run the camera.snap() command from the terminal. So this function cannot lock or
         # it will deadlock on the 2nd entry.
-        #
-        #- Wait for a lock.
-        #- cmd_lock.acquire()
         
         try:
-            #- print(trans_cmds(cmd) + '\n')
             logger.info('will evaluate {}'.format(trans_cmds(cmd)))
             
             # eval(exp, globals, locals) -> The exp argument is parsed and evaluated as a Python expression 
@@ -110,7 +110,6 @@ def make_run_cmd(repl_globals, app_state):
             logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
             return 'command error. enter sys.help() for help'
         finally:
-            #- cmd_lock.release()
             pass
 
     return run_cmd
@@ -133,20 +132,21 @@ def make_shut_down_werkzeug(app_state):
 
     return shut_down_werkzeug
 
-def start(app_state, silent_mode):
 
-    print('Enter: sys.help() to see a list of available commands.')
+def start(app_state, silent_mode, start_cmd):
 
-    repl_globals = {'__builtins__':None, 'dir':dir}
+    #- repl_globals = {'__builtins__':None, 'dir':dir, 'create_private_key':create_private_key}
+    repl_globals = {'__builtins__':None}
 
+    #TODO do we need run_cmd.  Research and factor out if necessary
     global run_cmd
     run_cmd  = make_run_cmd(repl_globals, app_state) 
+    app_state['sys']['cmd'] = run_cmd 
 
-    #- app_state['sys'] = {}
     app_state['sys']['help'] = help
     app_state['sys']['exit'] = make_exit_mvp(app_state)
-    app_state['sys']['dir'] = sys_dir 
-    app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
+    app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
+    #- app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
 
     # TBD - considering adding a command: sys.inject(r[resource_name], 'start':'stop')
@@ -155,12 +155,19 @@ def start(app_state, silent_mode):
     #       This would make it easier to do things like spend time sending and receiving input
     #       from the Arduino serial monitor.
 
+    if start_cmd:
+         print(app_state['sys']['cmd'](start_cmd))
+
+    if not app_state['stop']:    
+         print('Enter: sys.help() to see a list of available commands.')
+    
     while not app_state['stop']:
 
         # Listen for commands from the shell if enabled, otherwise wait to be stopped.
         if not silent_mode:
             # TBD: Need to sanitize the name to guard against shell attack.
-            cmd = input(device_name + ': ')
+            #- cmd = input(device_name + ': ')
+            cmd = input(app_state['config']['device_name'] + ': ')
             print(app_state['sys']['cmd'](cmd))
         else:
             # TODO - I think one can just return at this point. No need to keep the thread safe, 

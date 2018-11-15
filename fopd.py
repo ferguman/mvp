@@ -27,65 +27,21 @@
 from check_python_version import check_python_version
 check_python_version()
 
-from python.logger import get_top_level_logger
-from python.verify_config_files import verify_config_file
-logger = get_top_level_logger()
-
-logger.info('############## starting farm operation platform device ################')
-
-# Check that the configuration file is present and then load it.
-verify_config_file()
-
-# After the above check we know it's safe to load the rest of the modules.
-from importlib import import_module
-import threading
-
-# Load mvp libraries
-from config.config import system
-#- from web.flask_app import run_flask 
 from python.args import get_args
-from python.repl import start
+from python.utilities.main import execute_utility
+from python.main import execute_main
+from python.verify_config_files import verify_config_file
 
 # Process the command line args
 args = get_args()
 
-logger.info('fopd device id: {}'.format(system['device_id']))
+# If the user has specifed a utility then run it and then exit.
+if args.utility:
+    execute_utility(args)
+    exit()
 
-# TODO: I think we can take cmds out. 
-# Some threads such as repl and web chart generator expose functions on 'sys', so
-# add the 'sys' key for them to tack stuff onto. 
-s = {'name': system['name']}
-app_state = {'system': s, 'cmds':{}, 'stop': False, 'silent_mode':args.silent, 'sys':{'cmd':None}}
+# Check that the configuration file is present and then load it.
+verify_config_file()
 
-# create a Barrier that all the threads can syncronize on. This is to
-# allow threads such as mqtt or data loggers to get initialized before
-# other threads try to call them.
-#
-b = threading.Barrier(len(system['resources']), timeout=20) 
-
-# Each resource is implemented as a thread. Setup all the threads.
-tl = []
-for r in system['resources']:
-
-    m = import_module(r['imp'])
-
-    if 'daemon' in r:
-        tl.append(threading.Thread(target=m.start, daemon=r['daemon'], name=r['args']['name'], args=(app_state, r['args'], b)))
-    else:
-        tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
-
-# start the built in REPL interpretter.
-tl.append(threading.Thread(target=start, name='repl', args=(app_state, args.silent)))
-
-# Start all threads
-for t in tl:
-    t.start()
-    
-logger.info('fopd startup complete')
-
-# Wait for non-daemon threads to complete.
-for t in tl:
-    if not t.isDaemon():
-        t.join()
-
-logger.info('fopd shutdown complete')
+execute_main(args)
+exit()

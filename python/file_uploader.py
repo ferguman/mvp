@@ -9,7 +9,6 @@ from uuid import uuid4
 from python.logger import get_sub_logger 
 from python.nacl_fop import decrypt
 
-#- from config.config import device_id, hmac_secret_key, fop_jose_id
 from config.config import device_id, hmac_secret_key_b64_cipher, fop_jose_id
 
 # Note: This module uses JWT security (via jose).  Paseto is another system for implemeting token based security.

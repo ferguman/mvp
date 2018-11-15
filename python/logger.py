@@ -2,7 +2,7 @@ from logging import handlers, getLogger, Formatter, ERROR, INFO, DEBUG
 from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
 from os import getcwd
-from config.config import device_name
+#- from config.config import device_name
 
 # TBD:  Move the logging configuration to a dictionary stored in a configuration file.
 # On linux use tail -F (translates as tail --follow=name --retry) to follow the 
@@ -13,13 +13,15 @@ from config.config import device_name
 #
 
 handler = None
+device_name = 'fopd' 
 
 def get_the_fopd_log_handler():
     return handler
 
-def get_top_level_logger():
+def get_top_level_logger(this_devices_name):
 
-   global handler
+   global handler, device_name
+   device_name = this_devices_name
 
    logger = getLogger(device_name)
    logger.setLevel(INFO)
