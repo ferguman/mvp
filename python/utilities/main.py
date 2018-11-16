@@ -15,16 +15,6 @@ def create_config_directory() -> 'path_to_config_file':
 
     return cp
 
-    sys_file_path = cp + '/system.py'
-    if path.isfile(sys_file_path):
-        print('WARNING: A private key file already exists: {}.\n'.format(pkfp),
-              'If you proceed this file will be deleted. Any key stored in this file will be lost\n',
-              'and thus any date encrypted to that key such as device configuration data will be lost.\n',
-              'Enter yes to proceed, no to exit')
-        cmd = input('fopd: ')
-
-        if cmd.lower() != 'yes':
-            return 'CANCELED'
 
 def select_system():
     """ Ask the user what hardware their software will be run on """
@@ -44,6 +34,17 @@ def select_system():
     if not cmd.lower() == 'fc1':
         print('this utility only supports fc1 at this time. will exit')
         return 'CANCELLED'
+
+    sys_file_path = cp + '/system.py'
+    if path.isfile(sys_file_path):
+        print('WARNING: A private key file already exists: {}.\n'.format(pkfp),
+              'If you proceed this file will be deleted. Any key stored in this file will be lost\n',
+              'and thus any date encrypted to that key such as device configuration data will be lost.\n',
+              'Enter yes to proceed, no to exit')
+        cmd = input('fopd: ')
+
+        if cmd.lower() != 'yes':
+            return 'CANCELED'
 
     cp = create_config_directory()
 
