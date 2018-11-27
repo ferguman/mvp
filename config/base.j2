@@ -1,0 +1,25 @@
+# fopd configuration
+{% block settings %}
+# ############## This devices identity settings
+{% for key, val in config['identity'].items() %}
+{{key}}={{val}}
+{% endfor %}
+
+# ############## JWT Settings
+{% for key, val in config['jwt'].items() %}
+{{key}}={{val}}
+{% endfor %}
+
+# ############## Couchdb Settings 
+{% for key, val in config['couchdb'].items() %}
+{{key}}={{val}}
+{% endfor %}
+
+# ############## MQTT Settings
+{% for key, val in config['mqtt'].items() %}
+{{key}}={{val}}
+{% endfor %}
+{% endblock %}
+
+{% block device %}
+{% endblock %}

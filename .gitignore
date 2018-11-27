@@ -3,6 +3,7 @@
 *.log
 *.svg
 __pycache__/
+zzzconfig
 climate_recipes/*.*
 climate_recipes/*
 !climate_recipes/.gitkeep
@@ -12,6 +13,8 @@ logs/*.*
 !logs/.gitkeep
 config/*.*
 !config/.gitkeep
+!config/base.j2
+!config/config_fc1.j2
 pictures/*.*
 !pictures/.gitkeep
 state/*.*

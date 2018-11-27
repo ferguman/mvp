@@ -135,18 +135,17 @@ def make_shut_down_werkzeug(app_state):
 
 def start(app_state, silent_mode, start_cmd):
 
-    #- repl_globals = {'__builtins__':None, 'dir':dir, 'create_private_key':create_private_key}
     repl_globals = {'__builtins__':None}
 
     #TODO do we need run_cmd.  Research and factor out if necessary
-    global run_cmd
-    run_cmd  = make_run_cmd(repl_globals, app_state) 
-    app_state['sys']['cmd'] = run_cmd 
+    #- global run_cmd
+    #- run_cmd  = make_run_cmd(repl_globals, app_state) 
+    #- app_state['sys']['cmd'] = run_cmd 
+    app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
 
     app_state['sys']['help'] = help
     app_state['sys']['exit'] = make_exit_mvp(app_state)
     app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
-    #- app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
 
     # TBD - considering adding a command: sys.inject(r[resource_name], 'start':'stop')
@@ -156,10 +155,10 @@ def start(app_state, silent_mode, start_cmd):
     #       from the Arduino serial monitor.
 
     if start_cmd:
-         print(app_state['sys']['cmd'](start_cmd))
+        print(app_state['sys']['cmd'](start_cmd))
 
     if not app_state['stop']:    
-         print('Enter: sys.help() to see a list of available commands.')
+        print('Enter: sys.help() to see a list of available commands.')
     
     while not app_state['stop']:
 
