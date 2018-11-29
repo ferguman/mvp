@@ -6,7 +6,7 @@ import json
 
 #- from config.config import log_data_to_local_couchdb, log_data_to_local_file
 from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
-from python.nacl_fop import decrypt
+from python.encryption.nacl_fop import decrypt
 from python.logger import get_sub_logger 
 
 logger = get_sub_logger(__name__)

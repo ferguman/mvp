@@ -33,10 +33,13 @@ def get_identity(sys_type: str) -> dict:
     generators = {'device_id':{'auto':lambda s: uuid4()},'organization_guid':{'auto':lambda s: uuid4()}}
 
     if sys_type == 'fc1':
-       vals = vals + ('arduino_id',)
+       vals = vals + ('arduino_id', 'camera_guid')
        prompts['arduino_id'] = 'Enter your arduino guid.  Enter auto if you wish the system\n'+\
                                'to generate an id for you.'
+       prompts['camera_guid'] = 'Enter the guid of your food computers camera.  Enter auto if you wish the\n'+\
+                                'system to generate a guid for you.'
        generators['arduino_id'] = {'auto':lambda s: uuid4()}
+       generators['camera_guid'] = {'auto':lambda s: uuid4()}
 
     return prompt(vals, prompts, generators)
 
@@ -48,6 +51,11 @@ def get_jwt_info(sys_type: str) -> dict:
                'hmac_secret_key_b64_cipher':'Enter the value of your jose fop hmac secret key.\n'+\
                                             'This is a 32 character URL safe random token provided by your fop provider.'} 
     generators = {'hmac_secret_key_b64_cipher': {'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
+
+    if sys_type == 'fc1':
+        vals = vals + ('fws_url',)
+        prompts['fws_url'] = 'Enter the URL of your Farm Web Services server.\n'
+        
     return prompt(vals, prompts, generators)
 
 def get_couchdb_info(sys_type:str) -> dict:
@@ -83,11 +91,11 @@ def prompt(vals:tuple, prompts:dict, generators:dict):
                 result[val] = generators[val][cmd.lower()](cmd.lower())
             # look for a default value generator
             elif 'default' in generators[val]: 
-                result[val] = generators[val]['default'](cmd.lower())
+                result[val] = generators[val]['default'](cmd)
             else:
-                result[val] = cmd.lower()
+                result[val] = cmd
         else:
-            result[val] = cmd.lower()
+            result[val] = cmd
 
     return result 
 
@@ -110,10 +118,18 @@ def create_system():
 
     if cmd.lower() == 'exit':
         return 'CANCELLED'
+
     if cmd.lower() == 'fc1':
         template_file = 'config_fc1.j2' 
+    elif cmd.lower() == 'fc2':
+        template_file = 'config_fc2.j2' 
+    elif cmd.lower() == 'mvp':
+        template_file = 'config_mvp.j2' 
     elif cmd.lower() == 'custom':
-        pass
+        template_file = 'config_custom.j2'
+    elif cmd.lower() == 'download':
+        print('The download function is not availble in this version of the fopd client.')
+        return 'CANCELLED'
     else:
         print('ERROR - unknown hardware type')
 
@@ -140,7 +156,7 @@ def create_system():
        loader=FileSystemLoader(tp),
        trim_blocks=True
        ) 
-    template = env.get_template('config_fc1.j2')
+    template = env.get_template(template_file)
 
     # Render the jinja2 template into a new version of the config file
     with open(cfp, 'w') as f:
@@ -196,6 +212,6 @@ def execute_utility(args):
     eval_state['config'] = {'device_name':'fopd'}
 
     # Run the repl and start with the selected utility. 
-    start(eval_state, args.silent, 'utils.'+ args.utility +'()')
+    start(eval_state, args.silent, start_cmd='utils.'+ args.utility +'()')
 
     exit()

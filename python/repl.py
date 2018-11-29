@@ -133,7 +133,7 @@ def make_shut_down_werkzeug(app_state):
     return shut_down_werkzeug
 
 
-def start(app_state, silent_mode, start_cmd):
+def start(app_state, silent_mode, start_cmd=None):
 
     repl_globals = {'__builtins__':None}
 

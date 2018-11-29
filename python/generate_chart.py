@@ -5,7 +5,7 @@ import requests
 import json
 from datetime import datetime
 
-from python.nacl_fop import decrypt
+from python.encryption.nacl_fop import decrypt
 
 from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 

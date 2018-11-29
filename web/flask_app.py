@@ -15,12 +15,10 @@ class fopdwFlask(Flask):
         comment_end_string = '#)',
     ))
     
-app = fopdwFlask(__name__)
-app.logger.info('starting Flask version {}'.format(__version__))
-
-# TODO: I don't see the need for keeping a local reference to app_state. See
-#       if you can remove this stuff.
-#- app_state = None
+#- app = fopdwFlask(__name__)
+#- app.logger.info('starting Flask version {}'.format(__version__))
+"""
+app_state = None
 
 @app.route('/')
 def home():
@@ -28,20 +26,22 @@ def home():
     resp = make_response(render_template('home.html', chart_list=app_state['sys']['chart_list']))
     resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
     return resp
+"""
 
-def start(state, args, barrier):
+def start(app_state, args, barrier):
 
-    # TODO: Try moving the app instantiation adn the route functions into this routine. That will
-    #       move the app_state to a local variable.
+    app = fopdwFlask(__name__)
+    app.logger.info('starting Flask version {}'.format(__version__))
 
-    # take up the app_state from the caller
-    global app_state
-    app_state = state 
+    @app.route('/')
+    def home():
+
+        resp = make_response(render_template('home.html', chart_list=app_state['sys']['chart_list']))
+        resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
+        return resp
 
     # Tell all the other threads that you are ready to go.
     barrier.wait()
 
     # Start the Flask application. Note: app.run does not return.
-    # run Flask.  Note: this function does not return.
-    #- app.run(host='127.0.0.1')
     app.run(host=args['host'], port=args['port'])

@@ -12,7 +12,7 @@ def execute_main(args):
     #       file yet.  So make sure that execute_main is only called once in the program.
     from config.config import system, device_name
 
-    logger = get_top_level_logger(name)
+    logger = get_top_level_logger(device_name)
 
     logger.info('############## starting farm operation platform device ################')
 
