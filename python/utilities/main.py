@@ -74,7 +74,8 @@ def get_mqtt_info(sys_type:str) -> dict:
                'mqtt_password_b64_cipher':'Enter your MQTT account password.',
                'mqtt_url':'Enter your MQTT broker url.',
                'mqtt_port':'Enter your MQTT broker port number.'}
-    generators = {'mqtt_password_b64_cipher':{'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
+    generators = {'mqtt_password_b64_cipher':{'default':lambda s: encrypt(bytes(s, 'utf-8'))},
+                  'mqtt_port':{'default':lambda s: int(s)}}
     return prompt(vals, prompts, generators)
 
 def prompt(vals:tuple, prompts:dict, generators:dict):

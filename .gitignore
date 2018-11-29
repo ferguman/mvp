@@ -3,7 +3,6 @@
 *.log
 *.svg
 __pycache__/
-zzzconfig
 climate_recipes/*.*
 climate_recipes/*
 !climate_recipes/.gitkeep
@@ -22,6 +21,6 @@ state/*
 !state/.gitkeep
 fopd/
 web/
-!/web/.gitkeep
+!web/.gitkeep
 web/static/
-!/web/static/.gitkeep
+!web/static/.gitkeep
