@@ -1,4 +1,5 @@
 from flask import Flask, render_template, __version__, make_response
+from python.logger import get_sub_logger 
 
 class fopdwFlask(Flask):
 
@@ -14,24 +15,16 @@ class fopdwFlask(Flask):
         comment_start_string = '(#',
         comment_end_string = '#)',
     ))
-    
-#- app = fopdwFlask(__name__)
-#- app.logger.info('starting Flask version {}'.format(__version__))
-"""
-app_state = None
 
-@app.route('/')
-def home():
-
-    resp = make_response(render_template('home.html', chart_list=app_state['sys']['chart_list']))
-    resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
-    return resp
-"""
+logger = get_sub_logger(__name__)
 
 def start(app_state, args, barrier):
 
+    #- print('starting Flask version ...')
+    #- app.logger.info('starting Flask version {}'.format(__version__))
+    logger.info('starting Flask version {}'.format(__version__))
+
     app = fopdwFlask(__name__)
-    app.logger.info('starting Flask version {}'.format(__version__))
 
     @app.route('/')
     def home():

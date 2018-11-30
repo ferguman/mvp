@@ -7,6 +7,8 @@ from threading import Lock
 from time import sleep
 import re
 
+from flask import request
+
 from python.logger import get_sub_logger 
 
 logger = get_sub_logger(__name__)
@@ -114,14 +116,14 @@ def make_run_cmd(repl_globals, app_state):
 
     return run_cmd
 
-from flask import request
 # TODO: See flask.pocoo.org/snippets/67/ and flask.pocoo.org/docs/1.0/reqcontext.
 #       As of 9/30 this code returns No shutdown function found. The docs say this
 #       reset stuff only works on the development server. I think my testing was done
 #       in producton mode. Need to retest in development mode.
 #
 def make_shut_down_werkzeug(app_state):
-
+    return None 
+    """ -
     def shut_down_werkzeug():
         with app_state['sys']['flask_app'].test_request_context('/bogus'):
             func = request.environ.get('werkzeug.server.shutdown')
@@ -131,6 +133,7 @@ def make_shut_down_werkzeug(app_state):
                 return 'found a shutdown function'
 
     return shut_down_werkzeug
+    """
 
 
 def start(app_state, silent_mode, start_cmd=None):

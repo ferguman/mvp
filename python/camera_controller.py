@@ -179,8 +179,8 @@ def start(app_state, args, b):
                    s.new_picture(file_location)
                 except:
                    logger.error('camera subscriber exception occured: {}, {}'.format(exc_info()[0], exc_info()[1]))
-            elif s.wants_periodic_calls:
-                s.periodic_call()
+            #+ elif s.wants_periodic_calls:
+            #+    s.periodic_call()
 
         # TODO - put in code to delete any picture files that were created. Keep in mind that this assumes that 
         #        the s's above don't return from the new_picture method till they are done with the file.  A 

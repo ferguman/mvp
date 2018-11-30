@@ -1,9 +1,7 @@
 import threading
 from importlib import import_module
-from python.repl import start
+from python.repl import start as repl_start
 from python.logger import get_top_level_logger
-
-#- from python.verify_config_files import verify_config_file
 
 def execute_main(args):
 
@@ -44,7 +42,7 @@ def execute_main(args):
             tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
     # start the built in REPL interpretter.
-    tl.append(threading.Thread(target=start, name='repl', args=(app_state, args.silent)))
+    tl.append(threading.Thread(target=repl_start, name='repl', args=(app_state, args.silent)))
 
     # Start all threads
     for t in tl:

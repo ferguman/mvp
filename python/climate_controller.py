@@ -437,16 +437,18 @@ def run_air_flush_loop(controller):
 
     return flush_on
 
+
 def check_circ_fan(controller):
 
     global climate_state
 
-    #turn the circulation fan on
-    climate_state['circ_fan_on'] = True
-    climate_state['circ_fan_last_on_time'] = climate_state['cur_time']
-    controller['cmd']('on', 'circ_fan') 
-    logger.info('turning circulation fan on') 
+    #turn the circulation fan on and leave it on.
+    if not climate_state['circ_fan_on']: 
 
+        logger.info('turning circulation fan on') 
+        climate_state['circ_fan_on'] = True
+        climate_state['circ_fan_last_on_time'] = climate_state['cur_time']
+        controller['cmd']('on', 'circ_fan') 
 
 def run_heating_loop(controller, hysteresis):
 
