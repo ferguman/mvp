@@ -9,7 +9,7 @@ from threading import Lock
 from time import sleep, time
 
 import datetime
-import json
+from json import dump, dumps, load 
 #- import time
 
 from python.logData import logDB
@@ -40,8 +40,8 @@ def load_recipe_file(rel_path):
 
         with open(recipe_path) as f:
             try:
-                recipe = json.load(f)
-                climate_state['recipe'] = recipe
+                #- recipe = json.load(f)
+                climate_state['recipe'] = load(f)
             except:
                 logger.error('cannot parce recipe file.')
         
@@ -61,7 +61,7 @@ def load_state_file(rel_path):
         with open(state_file_path) as f:
             try:
                 #- global climate_state
-                climate_state = json.load(f)
+                climate_state = load(f)
             except:
                 logger.error('cannot load state file.')
         
@@ -83,7 +83,7 @@ def write_state_file(rel_path, update_interval: 'secs', force: bool):
             logger.info('writing climate state file {}'.format(state_file_path))
 
             with open(state_file_path, 'w') as outfile:
-                    json.dump(climate_state, outfile)
+                    dump(climate_state, outfile)
         except:
             logger.error('error encountered while writing state file: {}{}'.format(exc_info()[0], exc_info()[1]))
 
@@ -116,7 +116,7 @@ def show_recipe():
     global climate_state
 
     if climate_state['recipe'] != None:
-        return climate_state['recipe']
+        return dumps(climate_state['recipe'])
     else:
         return None 
 
