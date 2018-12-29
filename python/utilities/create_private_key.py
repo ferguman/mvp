@@ -26,10 +26,20 @@ def create_private_key():
 
         if cmd.lower() != 'yes':
             return 'CANCELED'
-        
+
+    # ask the user if they want to use their own private key or generate a random one.
+    vals = ('private_key',)
+    prompts = {'private_key':'If you wish to supply your own private key then please enter it here\n'+\
+                             "as a 32 byte array (e.g. b'&\xfeabd\x32 ....'). Enter random in this\n" +\
+                             'field to have the system generate a random key for you.'}
+    generators = {'random':{lambda s: create_random_key()}}
+
+    key = prompt(vals, prompts, generators)
+
     with open(pkfp, 'w') as f:
 
-        c = 'nsk_b64 = {}'.format(create_random_key())
+        #- c = 'nsk_b64 = {}'.format(create_random_key())
+        c = 'nsk_b64 = {}'.format(key)
         f.write(c)
 
     return 'OK'
