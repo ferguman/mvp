@@ -9,7 +9,7 @@ def execute_utility(args):
 
     eval_state = {'stop':True, 'sys':{'cmd':None}}
     eval_state['utils'] = {'create_private_key':create_private_key}
-    eval_state['utils']['create_system'] = create_system()
+    eval_state['utils']['create_system'] = create_system
     eval_state['system'] = {}
     eval_state['config'] = {'device_name':'fopd'}
 

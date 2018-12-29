@@ -6,7 +6,7 @@ def create_private_key():
     """ Create a private key then put it in a private key file """
 
     print('This utility will create a new private key and then create a file containing this private key.')
-    print('The file will be placed at config/private_key.py.\n')
+    print('The file will be placed at config/private_key.\n')
     print('Enter yes to proceed, no to exit')
     
     cmd = input('fopd: ')
@@ -16,7 +16,7 @@ def create_private_key():
 
     cp = create_config_directory()
 
-    pkfp = cp + '/private_key.py'
+    pkfp = cp + '/private_key'
     if path.isfile(pkfp):
         print('WARNING: A private key file already exists: {}.\n'.format(pkfp),
               'If you proceed this file will be deleted. Any key stored in this file will be lost\n',
@@ -36,11 +36,9 @@ def create_private_key():
 
     key = prompt(vals, prompts, generators)
 
-    with open(pkfp, 'w') as f:
+    with open(pkfp, 'wb') as f:
 
-        #- c = 'nsk_b64 = {}'.format(create_random_key())
-        c = 'nsk_b64 = {}'.format(key)
-        f.write(c)
+        f.write(key)
 
     return 'OK'
 

@@ -4,6 +4,7 @@ from uuid import uuid4
 from jinja2 import Environment, FileSystemLoader
 
 from python.encryption.nacl_fop import encrypt
+from python.utilities.prompt import prompt
 
 def get_identity(sys_type: str) -> dict:
 
