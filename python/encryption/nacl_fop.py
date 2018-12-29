@@ -46,6 +46,14 @@ class SecretKeyException(Exception):
     pass
 
 class SecretKey:
+    """ This Context makes the secret key available.  The location of the secret
+        key file is hard coded to config/private_key.  The context stores the
+        secret key in a bytearray.  When the context exits it overwrites the 
+        contents of the bytearray with zero to prevent malware from snooping the
+        passcode.  Note: I don't know what happens to the in memory file contents,
+        or the return value of the 'bytes()' calls in this module.
+        Nor do I know what nacl does with it's reference to the secret key.
+    """
 
     def __enter__(self) -> 'bytearray':
 

@@ -10,7 +10,7 @@ climate_recipes/*
 data/*.txt
 logs/*.*
 !logs/.gitkeep
-config/*.*
+config/*
 !config/.gitkeep
 !config/base.j2
 !config/config_fc1.j2
