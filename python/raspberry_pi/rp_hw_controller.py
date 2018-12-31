@@ -156,10 +156,10 @@ def make_cmd(controls: list, control_configs: dict):
 
                 if cmd == 'on':
                     if control['state'] != 'on':
-                        logger.info('Recevied {0} on command. Will turn {0} on.'.format(control['config']['name']))
+                        logger.info('Received {0} on command. Will turn {0} on.'.format(control['config']['name']))
                 elif cmd == 'off':
                     if control['state'] != 'off':
-                        logger.info('Recevied {0} off command. Will turn {0} off.'.format(control['config']['name']))
+                        logger.info('Received {0} off command. Will turn {0} off.'.format(control['config']['name']))
 
                 control['state'] = cmd
                 return 'OK'

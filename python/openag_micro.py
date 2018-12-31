@@ -242,12 +242,12 @@ def make_cmd(mc_state, ser):
 
                 if cmd == 'on':
                     if cur_command[target_index] == 0:
-                        logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
+                        logger.info('Received {0} on command. Will turn {0} on.'.format(target))
                     cur_command[target_index] = 1
                     return 'OK'
                 elif cmd == 'off':
                     if cur_command[target_index] == 1:
-                        logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
+                        logger.info('Received {0} off command. Will turn {0} off.'.format(target))
                     cur_command[target_index] = 0
                     return 'OK'
             else:
