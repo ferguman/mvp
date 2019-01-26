@@ -147,9 +147,15 @@ def start(app_state, args, b):
         if mqtt_client: 
             subscribe_for_commands(mqtt_client, args['mqtt_client_id'])
 
-        # Let the system know that you are good to go. 
-        b.wait()
+        # Let the system know that you are good to go.
+        try:
+            b.wait()
+        except Exception as e:
+            logger.error('Cannot start because one or more other resources did not start')
+            app_state['stop'] = True
 
+        logger.error('Cannot start the mc because one or more other resources did not start')
+        app_state['stop'] = True
         while not app_state['stop']:
 
             if mqtt_client:

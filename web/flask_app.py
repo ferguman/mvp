@@ -29,12 +29,22 @@ def start(app_state, args, barrier):
     @app.route('/')
     def home():
 
-        resp = make_response(render_template('home.html', chart_list=app_state['sys']['chart_list']))
+        if args['chart_list_source']:
+            cl = app_state[args['chart_list_source']]['chart_list']
+        else:
+            cl = [] 
+        resp = make_response(render_template('home.html', chart_list=cl, num_of_charts=len(cl)))
+        #- resp = make_response(render_template('home.html', chart_list=app_state[args['chart_list_source']]['chart_list']))
         resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
         return resp
 
     # Tell all the other threads that you are ready to go.
-    barrier.wait()
+    #- barrier.wait()
+    try:
+        barrier.wait()
+    except Exception as e:
+        logger.error('Cannot start Flask because one or more other resources did not start')
+        return
 
     # Start the Flask application. Note: app.run does not return.
     app.run(host=args['host'], port=args['port'])

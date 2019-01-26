@@ -1,7 +1,10 @@
 import threading
+from time import sleep
+
 from importlib import import_module
 from python.repl import start as repl_start
 from python.logger import get_top_level_logger
+
 
 def execute_main(args):
 
@@ -28,6 +31,7 @@ def execute_main(args):
     # allow threads such as mqtt or data loggers to get initialized before
     # other threads try to call them.
     #
+    logger.info('will start {} resource threads'.format(len(system['resources'])))
     b = threading.Barrier(len(system['resources']), timeout=20) 
 
     # Each resource is implemented as a thread. Setup all the threads.
@@ -47,8 +51,23 @@ def execute_main(args):
     # Start all threads
     for t in tl:
         t.start()
-        
-    logger.info('fopd startup complete')
+
+    '''-
+    # Wait till all the threads are ready.
+    logger.info('waiting for all the resources to start...')
+    while b.n_waiting < len(system['resources']):
+        sleep(2)
+        # Wait for all the threads to pass the barrier.
+        logger.info('currently {} threads are ready out of {}'.format(b.n_waiting, len(system['resources'])))
+        # Check to see if the Barrier has timed out
+        if b.n_waiting == 0:
+            logger.error('one or more of the resources failed to start')
+            exit() 
+    '''
+
+    # the following message is a lie.  The threads may or may not have passed the barrier
+    # at this point in time.
+    #- logger.info('fopd startup complete')
 
     # Wait for non-daemon threads to complete.
     for t in tl:

@@ -453,7 +453,11 @@ def start(app_state, args, b):
     extract_sensor_values(send_mc_cmd(ser, make_fc_cmd(mc_state)), vals)
 
     # Let the system know that you are good to go.
-    b.wait()
+    try:
+        b.wait()
+    except Exception as e:
+        logger.error('Cannot start the mc because one or more other resources did not start')
+        app_state['stop'] = True
 
     while not app_state['stop']:
 
