@@ -17,7 +17,7 @@
 # 
 #
 # The mvp provides a REPL loop for interactive operation. This loop can be turned off
-# by invoking the mvp in silent mode. (i.e. --silentysm as a python argument to the invocation of fopd.py.
+# by invoking the mvp in silent mode. (i.e. --silent) as a python argument to the invocation of fopd.py.
 #
 # It is assumed that mvp.py is located in a directory that contains code and data organized
 # identical to the way it is stored in github (https://github.com/ferguman/fopd)

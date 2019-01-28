@@ -136,14 +136,10 @@ def make_shut_down_werkzeug(app_state):
     """
 
 
-def start(app_state, silent_mode, start_cmd=None):
+def start(app_state, silent_mode, barrier, start_cmd=None):
 
     repl_globals = {'__builtins__':None}
 
-    #TODO do we need run_cmd.  Research and factor out if necessary
-    #- global run_cmd
-    #- run_cmd  = make_run_cmd(repl_globals, app_state) 
-    #- app_state['sys']['cmd'] = run_cmd 
     app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
 
     app_state['sys']['help'] = help
@@ -157,6 +153,17 @@ def start(app_state, silent_mode, start_cmd=None):
     #       This would make it easier to do things like spend time sending and receiving input
     #       from the Arduino serial monitor.
 
+    # Let the system know that you are good to go.
+    if barrier:
+        try:
+            if not silent_mode:
+                print('Waiting for system to initialize...')
+            barrier.wait()
+        except Exception as err:
+            # assume a broken barrier
+            logger.error('barrier error: {}'.format(str(err)))
+            app_state['stop'] = True
+
     if start_cmd:
         print(app_state['sys']['cmd'](start_cmd))
 
@@ -168,7 +175,6 @@ def start(app_state, silent_mode, start_cmd=None):
         # Listen for commands from the shell if enabled, otherwise wait to be stopped.
         if not silent_mode:
             # TBD: Need to sanitize the name to guard against shell attack.
-            #- cmd = input(device_name + ': ')
             cmd = input(app_state['config']['device_name'] + ': ')
             print(app_state['sys']['cmd'](cmd))
         else:

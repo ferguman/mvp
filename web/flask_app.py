@@ -34,17 +34,18 @@ def start(app_state, args, barrier):
         else:
             cl = [] 
         resp = make_response(render_template('home.html', chart_list=cl, num_of_charts=len(cl)))
-        #- resp = make_response(render_template('home.html', chart_list=app_state[args['chart_list_source']]['chart_list']))
+
         resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
         return resp
 
-    # Tell all the other threads that you are ready to go.
-    #- barrier.wait()
+    # Let the system know that you are good to go.
     try:
         barrier.wait()
-    except Exception as e:
-        logger.error('Cannot start Flask because one or more other resources did not start')
-        return
+    except Exception as err:
+        # assume a broken barrier
+        logger.error('barrier error: {}'.format(str(err)))
+        app_state['stop'] = True
 
     # Start the Flask application. Note: app.run does not return.
-    app.run(host=args['host'], port=args['port'])
+    if not app_state['stop']:
+        app.run(host=args['host'], port=args['port'])

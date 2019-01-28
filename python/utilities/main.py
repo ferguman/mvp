@@ -14,6 +14,6 @@ def execute_utility(args):
     eval_state['config'] = {'device_name':'fopd'}
 
     # Run the repl and start with the selected utility. 
-    start(eval_state, args.silent, start_cmd='utils.'+ args.utility +'()')
+    start(eval_state, args.silent, None, start_cmd='utils.'+ args.utility +'()')
 
     exit()

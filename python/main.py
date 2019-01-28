@@ -32,7 +32,10 @@ def execute_main(args):
     # other threads try to call them.
     #
     logger.info('will start {} resource threads'.format(len(system['resources'])))
-    b = threading.Barrier(len(system['resources']), timeout=20) 
+    # Each resource will use the barrier to signal when they have completed their initialization.
+    # In addtion add one to the barrier count for the repl thread. It will also signal when it
+    # has completed it's initialization.
+    b = threading.Barrier(len(system['resources']) + 1, timeout=20) 
 
     # Each resource is implemented as a thread. Setup all the threads.
     tl = []
@@ -46,24 +49,11 @@ def execute_main(args):
             tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
     # start the built in REPL interpretter.
-    tl.append(threading.Thread(target=repl_start, name='repl', args=(app_state, args.silent)))
+    tl.append(threading.Thread(target=repl_start, name='repl', args=(app_state, args.silent, b)))
 
     # Start all threads
     for t in tl:
         t.start()
-
-    '''-
-    # Wait till all the threads are ready.
-    logger.info('waiting for all the resources to start...')
-    while b.n_waiting < len(system['resources']):
-        sleep(2)
-        # Wait for all the threads to pass the barrier.
-        logger.info('currently {} threads are ready out of {}'.format(b.n_waiting, len(system['resources'])))
-        # Check to see if the Barrier has timed out
-        if b.n_waiting == 0:
-            logger.error('one or more of the resources failed to start')
-            exit() 
-    '''
 
     # the following message is a lie.  The threads may or may not have passed the barrier
     # at this point in time.

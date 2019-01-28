@@ -150,12 +150,11 @@ def start(app_state, args, b):
         # Let the system know that you are good to go.
         try:
             b.wait()
-        except Exception as e:
-            logger.error('Cannot start because one or more other resources did not start')
+        except Exception as err:
+            # assume a broken barrier
+            logger.error('barrier error: {}'.format(str(err)))
             app_state['stop'] = True
 
-        logger.error('Cannot start the mc because one or more other resources did not start')
-        app_state['stop'] = True
         while not app_state['stop']:
 
             if mqtt_client:
