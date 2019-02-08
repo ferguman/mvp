@@ -1,7 +1,10 @@
 import threading
+from time import sleep
+
 from importlib import import_module
 from python.repl import start as repl_start
 from python.logger import get_top_level_logger
+
 
 def execute_main(args):
 
@@ -23,12 +26,18 @@ def execute_main(args):
     # allow threads such as mqtt or data loggers to get initialized before
     # other threads try to call them.
     #
+    # Figure out how many active resources there are. Each active one needs to sync to the barrier.
     active_resource_count = 0
     for r in system['resources']:
         if r['enabled']:
             active_resource_count += 1
-    #- b = threading.Barrier(len(system['resources']), timeout=20) 
-    b = threading.Barrier(active_resource_count, timeout=20) 
+
+    # Each resource will use the barrier to signal when they have completed their initialization.
+    # In addtion add one to the active resource count for the repl thread. It will also signal when it
+    # has completed it's initialization.
+    #
+    logger.info('will start {} resource threads'.format(active_resource_count + 1))
+    b = threading.Barrier(active_resource_count + 1, timeout=20) 
 
     # Each resource is implemented as a thread. Setup all the threads.
     tl = []
@@ -43,13 +52,15 @@ def execute_main(args):
                 tl.append(threading.Thread(target=m.start, name=r['args']['name'], args=(app_state, r['args'], b)))
 
     # start the built in REPL interpretter.
-    tl.append(threading.Thread(target=repl_start, name='repl', args=(app_state, args.silent)))
+    tl.append(threading.Thread(target=repl_start, name='repl', args=(app_state, args.silent, b)))
 
     # Start all threads
     for t in tl:
         t.start()
-        
-    logger.info('fopd startup complete')
+
+    # the following message is a lie.  The threads may or may not have passed the barrier
+    # at this point in time.
+    #- logger.info('fopd startup complete')
 
     # Wait for non-daemon threads to complete.
     for t in tl:

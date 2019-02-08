@@ -59,6 +59,7 @@ div.tab button.active {
 </div>
 
 <div id="Charts" class="tabcontent">
+  (% if num_of_charts > 0: %)
       <p>Chart data is typically updated evey 20 mintues. Click
       <button v-on:click="update_charts">update</button> to refresh the charts.</p>
   (% for chart in chart_list: %)
@@ -66,6 +67,9 @@ div.tab button.active {
           "Your browser does not support SVG
       </object>
   (% endfor %)
+  (% else %)
+      "No charts are configured for your fopd."
+  (% endif %)
       
 </div>
 

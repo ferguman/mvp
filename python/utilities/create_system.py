@@ -1,19 +1,10 @@
-from python.logger import get_top_level_logger
-from python.repl import start
-from python.utilities.create_private_key import create_private_key
-from python.utilities.create_system import create_system
+from os import path, getcwd
+from uuid import uuid4
 
-logger = get_top_level_logger('fopd')
+from jinja2 import Environment, FileSystemLoader
 
-<<<<<<< HEAD
-def create_config_directory() -> 'path_to_config_file':
-
-    cp = path.join(getcwd(), 'config')
-    if not path.isdir(cp):
-        print('Creating directory named config at {}'.format(cp))
-        mkdir(cp)
-
-    return cp
+from python.encryption.nacl_fop import encrypt
+from python.utilities.prompt import prompt
 
 def get_identity(sys_type: str) -> dict:
 
@@ -36,18 +27,6 @@ def get_identity(sys_type: str) -> dict:
        generators['arduino_id'] = {'auto':lambda s: uuid4()}
        generators['camera_guid'] = {'auto':lambda s: uuid4()}
 
-    if sys_type == 'fc2':
-       vals = vals + ('arduino_id', 'camera_top_guid', 'camera_side_guid')
-       prompts['arduino_id'] = 'Enter your arduino guid.  Enter auto if you wish the system\n'+\
-                               'to generate an id for you.'
-       prompts['camera_top_guid'] = 'Enter the guid of your food computers top camera.  Enter auto if you wish the\n'+\
-                                    'system to generate a guid for you.'
-       prompts['camera_side_guid'] = 'Enter the guid of your food computers side camera.  Enter auto if you wish the\n'+\
-                                 'system to generate a guid for you.'
-       generators['arduino_id'] = {'auto':lambda s: uuid4()}
-       generators['camera_top_guid'] = {'auto':lambda s: uuid4()}
-       generators['camera_side_guid'] = {'auto':lambda s: uuid4()}
-
     return prompt(vals, prompts, generators)
 
 def get_jwt_info(sys_type: str) -> dict:
@@ -59,7 +38,7 @@ def get_jwt_info(sys_type: str) -> dict:
                                             'This is a 32 character URL safe random token provided by your fop provider.'} 
     generators = {'hmac_secret_key_b64_cipher': {'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
 
-    if sys_type == 'fc1' or sys_type == 'fc2':
+    if sys_type == 'fc1':
         vals = vals + ('fws_url',)
         prompts['fws_url'] = 'Enter the URL of your Farm Web Services server.\n'
         
@@ -84,28 +63,6 @@ def get_mqtt_info(sys_type:str) -> dict:
     generators = {'mqtt_password_b64_cipher':{'default':lambda s: encrypt(bytes(s, 'utf-8'))},
                   'mqtt_port':{'default':lambda s: int(s)}}
     return prompt(vals, prompts, generators)
-
-def prompt(vals:tuple, prompts:dict, generators:dict):
-
-    result = {}
-    
-    for val in vals:
-        print(prompts[val])
-        cmd = input('fopd: ')
-
-        if val in generators:
-            # look for invocation of custom generators by user (e.g. they entered 'auto')
-            if cmd.lower() in generators[val]:
-                result[val] = generators[val][cmd.lower()](cmd.lower())
-            # look for a default value generator
-            elif 'default' in generators[val]: 
-                result[val] = generators[val]['default'](cmd)
-            else:
-                result[val] = cmd
-        else:
-            result[val] = cmd
-
-    return result 
 
 
 def create_system():
@@ -175,51 +132,3 @@ def create_system():
           'the fopd system after you save your edits.')
     
     return 'OK'
-
-def create_private_key():
-    """ Create a private key then put it in a private key file """
-
-    print('This utility will create a new private key and then create a file containing this private key.')
-    print('The file will be placed at config/private_key.py.\n')
-    print('Enter yes to proceed, no to exit')
-    
-    cmd = input('fopd: ')
-
-    if cmd.lower() != 'yes':
-        return 'CANCELED'
-
-    cp = create_config_directory()
-
-    pkfp = cp + '/private_key.py'
-    if path.isfile(pkfp):
-        print('WARNING: A private key file already exists: {}.\n'.format(pkfp),
-              'If you proceed this file will be deleted. Any key stored in this file will be lost\n',
-              'and thus any date encrypted to that key such as device configuration data will be lost.\n',
-              'Enter yes to proceed, no to exit')
-        cmd = input('fopd: ')
-
-        if cmd.lower() != 'yes':
-            return 'CANCELED'
-        
-    with open(pkfp, 'w') as f:
-
-        c = 'nsk_b64 = {}'.format(create_random_key())
-        f.write(c)
-
-    return 'OK'
-
-
-=======
->>>>>>> 4591b9a2c458cdafc6a8a45814801d70d7f6de6a
-def execute_utility(args):
-
-    eval_state = {'stop':True, 'sys':{'cmd':None}}
-    eval_state['utils'] = {'create_private_key':create_private_key}
-    eval_state['utils']['create_system'] = create_system
-    eval_state['system'] = {}
-    eval_state['config'] = {'device_name':'fopd'}
-
-    # Run the repl and start with the selected utility. 
-    start(eval_state, args.silent, None, start_cmd='utils.'+ args.utility +'()')
-
-    exit()

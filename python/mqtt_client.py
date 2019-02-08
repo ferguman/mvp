@@ -147,8 +147,13 @@ def start(app_state, args, b):
         if mqtt_client: 
             subscribe_for_commands(mqtt_client, args['mqtt_client_id'])
 
-        # Let the system know that you are good to go. 
-        b.wait()
+        # Let the system know that you are good to go.
+        try:
+            b.wait()
+        except Exception as err:
+            # assume a broken barrier
+            logger.error('barrier error: {}'.format(str(err)))
+            app_state['stop'] = True
 
         while not app_state['stop']:
 
