@@ -41,6 +41,18 @@ def get_identity(sys_type: str) -> dict:
        generators['arduino_id'] = {'auto':lambda s: uuid4()}
        generators['camera_guid'] = {'auto':lambda s: uuid4()}
 
+    if sys_type == 'fc2':
+       vals = vals + ('arduino_id', 'camera_top_guid', 'camera_side_guid')
+       prompts['arduino_id'] = 'Enter your arduino guid.  Enter auto if you wish the system\n'+\
+                               'to generate an id for you.'
+       prompts['camera_top_guid'] = 'Enter the guid of your food computers top camera.  Enter auto if you wish the\n'+\
+                                    'system to generate a guid for you.'
+       prompts['camera_side_guid'] = 'Enter the guid of your food computers side camera.  Enter auto if you wish the\n'+\
+                                 'system to generate a guid for you.'
+       generators['arduino_id'] = {'auto':lambda s: uuid4()}
+       generators['camera_top_guid'] = {'auto':lambda s: uuid4()}
+       generators['camera_side_guid'] = {'auto':lambda s: uuid4()}
+
     return prompt(vals, prompts, generators)
 
 def get_jwt_info(sys_type: str) -> dict:
@@ -52,7 +64,7 @@ def get_jwt_info(sys_type: str) -> dict:
                                             'This is a 32 character URL safe random token provided by your fop provider.'} 
     generators = {'hmac_secret_key_b64_cipher': {'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
 
-    if sys_type == 'fc1':
+    if sys_type == 'fc1' or sys_type == 'fc2':
         vals = vals + ('fws_url',)
         prompts['fws_url'] = 'Enter the URL of your Farm Web Services server.\n'
         

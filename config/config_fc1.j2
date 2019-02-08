@@ -1,5 +1,55 @@
 {% extends "base.j2" %}
 {% block device %}
+# ############## Open Ag Micro Sensors and Actuators
+air_location_id = 'c0b1d0dc-66a4-46da-8aec-cc308a3359a1'
+grow_light_location_id = 'c0b1d0dc-66a4-46da-8aec-cc308a3359a1'
+water_location_id = '309e865b-f996-44ba-8893-8d5ac3b2d747'
+
+# The Food Computer V1 senses 8 things with 6 sensors -> air humidity, air temp, light par, light lumens,
+# air co2, water ph, water temp, and water ec.
+# TBD Need to add window and shell switch sensors.
+#
+reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
+                 'water_ec':7, 'shell_off':8, 'window_off':9}
+
+openag_micro_senso_readings = [
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'air', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'air', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'light', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'lum', 'value':None, 'units':'lm', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'light', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'par', 'value':None, 'units':'mol/sec', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'air', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'co2', 'value':None, 'units':'ppm', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'water', 'subject_location_id':'309e865b-f996-44ba-8893-8d5ac3b2d747', 
+                'attribute':'ph', 'value':None, 'units':'None', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'water', 'subject_location_id':'309e865b-f996-44ba-8893-8d5ac3b2d747', 
+                'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'water', 'subject_location_id':'309e865b-f996-44ba-8893-8d5ac3b2d747', 
+                'attribute':'ec', 'value':None, 'units':'mS/cm', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'air', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'shell_off', 'value':None, 'units':'None', 'ts':None},
+               {'type':'environment', 'device_name':'arduino', 'device_id':arduino_id,
+                'subject':'air', 'subject_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1', 
+                'attribute':'window_off', 'value':None, 'units':'None', 'ts':None},
+   ]
+
+# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
+#                    vent fan, circulation fan, chamber lights, motherboard lights.
+#
+command_set = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3, 
+                  'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
 # ############## food computer version 1 device configuration 
 from logging import DEBUG, INFO, WARNING, ERROR, CRITICAL
 
@@ -13,12 +63,10 @@ system = {'name': device_name, 'device_id': device_id,
                        'mqtt_password_b64_cipher':mqtt_password_b64_cipher,
                        'mqtt_client_id':device_id, 'mqtt_username':mqtt_username, 'mqtt_url':mqtt_url,
                        'mqtt_port':mqtt_port}},
-              {'imp':'python.openag_micro',  
+              {'imp':'python.openag_micro', 'enabled': True, 'daemon':False,  
                'args':{'name':'mc', 'serial_port':'/dev/ttyACM0', 'baud_rate':115200, 'log_level':INFO,
-                       'device_id':arduino_id,
-                       'air_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1',
-                       'grow_light_location_id':'c0b1d0dc-66a4-46da-8aec-cc308a3359a1',
-                       'water_location_id':'309e865b-f996-44ba-8893-8d5ac3b2d747',
+                       'device_id':arduino_id, 'sensor_readings':openag_micro_senso_readings,
+                       'sensor_reading_names':reading_names, 'command_set':command_set,
                        'mc_start_delay':1}},
               {'imp':'python.data_logger',
                'args': {'name':'data_logger', 'source':'mc', 'sample_interval': 20*60, 

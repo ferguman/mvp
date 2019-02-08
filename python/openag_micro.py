@@ -13,19 +13,22 @@ import serial
 from python.logger import get_sub_logger 
 logger = get_sub_logger(__name__)
 
+""" -
 reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
                  'water_ec':7, 'shell_off':8, 'window_off':9}
+""" 
 
-def make_get(vals):
+def make_get(vals, reading_names:dict)->'func':
 
     def get(value_name):
         if value_name in reading_names:
-            return vals[reading_names[value_name]] #vals[reading_names[value_name]]
+            return vals[reading_names[value_name]]
         else:
             return 'illegal value_name. Please specify one of {}.'.format(reading_names)
 
     return get
 
+""" - 
 # The Food Computer V1 senses 8 things with 6 sensors -> air humidity, air temp, light par, light lumens,
 # air co2, water ph, water temp, and water ec.
 # TBD Need to add window and shell switch sensors.
@@ -63,12 +66,14 @@ def create_sensor_reading_dict(args):
                 'subject':'air', 'subject_location_id':args['air_location_id'], 
                 'attribute':'window_off', 'value':None, 'units':'None', 'ts':None},
    ]
+"""
 
 # Provide a lock so that multiple threads are forced to wait for commands that
 # use the Arudiuno serial interface
 #
 serial_interface_lock = Lock()
 
+"""-
 # FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
 #                    vent fan, circulation fan, chamber lights, motherboard lights.
 #
@@ -76,6 +81,10 @@ target_indexes = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3,
                   'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
 #
 cur_command = [0,0,0,0,0,0,0,0]
+"""
+target_indexes = None
+cur_command = None
+
 cur_mc_cmd_str = None
 old_mc_cmd_str = None
 cur_mc_response = None
@@ -120,24 +129,6 @@ def make_fc_cmd(mc_state):
 
     return cmd + b'\n'
 
-    """
-    global cur_command
-
-    cmd = b'0'
-
-    for b in cur_command:
-        if b == 0:
-            cmd = cmd + b',false'
-        elif b == 1:
-            cmd = cmd + b',true'
-        else:
-           logger.error('bad command bit: {}'.format(b))
-           return b'0'
-
-    return cmd + b'\n'
-    """
-
-
 def extract_sensor_values(mc_response, vals):
 
     # Note these globals -> global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
@@ -155,13 +146,15 @@ def extract_sensor_values(mc_response, vals):
         if msg[0:1] == '0':
             values = re.compile(r'(\d+\.\d+)|\d+').findall(msg)
 
-            # TBD keep the next comment up to date.
-            # 11 = the current 10 implemented sensors values of the fcv1 plus the status code.
-            if len(values) == 11:
+            #- TBD keep the next comment up to date.
+            #- 11 = the current 10 implemented sensors values of the fcv1 plus the status code.
+            #- if len(values) == 11:
+            if len(values) == len(vals) + 1:
                 readings_found = True
                 # Save each reading with a timestamp.
                 # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
-                for i in range (1, 11):
+                #- for i in range (1, 11):
+                for i in range (1, len(vals) + 1):
                    vals[i-1]['value'] = values[i] 
 
     if not readings_found:
@@ -175,13 +168,6 @@ def extract_sensor_values(mc_response, vals):
         logger.error('Error reading fc sensors. fc returned: {}'.format(mc_response))
         for r in vals:
             r['value'] = None
-
-"""
-reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
-                 'water_ec':7, 'shell_off':8, 'window_off':9}
-target_indexes = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3, 
-                  'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
-"""
 
 def make_help(args):
 
@@ -242,12 +228,12 @@ def make_cmd(mc_state, ser):
 
                 if cmd == 'on':
                     if cur_command[target_index] == 0:
-                        logger.info('Recevied {0} on command. Will turn {0} on.'.format(target))
+                        logger.info('Received {0} on command. Will turn {0} on.'.format(target))
                     cur_command[target_index] = 1
                     return 'OK'
                 elif cmd == 'off':
                     if cur_command[target_index] == 1:
-                        logger.info('Recevied {0} off command. Will turn {0} off.'.format(target))
+                        logger.info('Received {0} off command. Will turn {0} off.'.format(target))
                     cur_command[target_index] = 0
                     return 'OK'
             else:
@@ -378,11 +364,14 @@ def send_mc_cmd(ser, cmd_str):
         old_mc_cmd_str = cur_mc_cmd_str
         cur_mc_cmd_str = cmd_str 
         old_mc_response = cur_mc_response
-    
+   
+        logger.debug('arduino command: {}'.format(cmd_str))
         ser.write(cmd_str)
         mc_response = ser.read_until(b'OK\r\n')
         logger.debug('arduino response {}'.format(mc_response))
         ser.reset_input_buffer()
+    except:
+        logger.error('serial interface error {}, {}'.format(exc_info()[0], exc_info()[1]))
     finally:
         serial_interface_lock.release()
 
@@ -403,7 +392,7 @@ def start_serial_connection(args):
     logger.info('starting openag microcontroller monitor for food computer version 1')
 
     # Starting the serial port resets the Arduino. 
-    ser = serial.Serial(args['serial_port'], args['baud_rate'])
+    ser = serial.Serial(args['serial_port'], args['baud_rate'], timeout=args['serial_timeout'])
 
     # The Arduino should respond with the serial  monitor salutation (i.e. 
     # "OpenAg Serial Monitor Starting" and any warnings or errors generated by the modules during
@@ -440,6 +429,11 @@ def start(app_state, args, b):
     mc_state = {}
     mc_state['camera_pose'] = None
 
+    # Initilize the actuators
+    global target_indexes, cur_command
+    target_indexes = args['command_set'] 
+    cur_command = [0] * len(target_indexes) 
+
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
@@ -447,8 +441,9 @@ def start(app_state, args, b):
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    
-    vals = app_state[args['name']]['sensor_readings'] = create_sensor_reading_dict(args)
-    app_state[args['name']]['get'] = make_get(vals)
+    #- vals = app_state[args['name']]['sensor_readings'] = create_sensor_reading_dict(args)
+    vals = app_state[args['name']]['sensor_readings'] = args['sensor_readings'] 
+    app_state[args['name']]['get'] = make_get(vals, args['sensor_reading_names'])
 
     # Start the fc loop and and let it run for n seconds where n = args['mc_start_delay'].
     # 10 is recommened for the fc version 1 in order to wait for the
@@ -463,26 +458,12 @@ def start(app_state, args, b):
     b.wait()
 
     while not app_state['stop']:
-      
-        """-
-        # Update current state - So logger routines can intelligently log changes
-        global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
-        old_mc_cmd_str = cur_mc_cmd_str
-        cur_mc_cmd_str = make_fc_cmd(mc_state)
-        old_mc_response = cur_mc_response
-        
-        # Send the current command to the fc.
-        cur_mc_response = send_mc_cmd(ser, cur_mc_cmd_str)
-        """
 
         # Send a command string to the Arduino that actuates as per the current controller state.
         cur_mc_response = send_mc_cmd(ser, make_fc_cmd(mc_state))
 
         # Look for a set of sensor readings and extract them if you find one.
         extract_sensor_values(cur_mc_response, vals)
-
-        # Look for warnings and errors.
-        #- log_cmd_changes()
 
         sleep(1)
 
