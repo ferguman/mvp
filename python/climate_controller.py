@@ -175,6 +175,10 @@ def show_state():
         s = s + show_date(climate_state['air_cooler_last_on_time'], 'Air cooler last on time')
         s = s + show_date(climate_state['air_cooler_last_off_time'], 'Air cooler last off time')
 
+        s = s + 'Flood on: {}\n'.format(climate_state['flood_on'])
+        s = s + show_date(climate_state['flood_last_on_time'], 'Last flood on time')
+        s = s + show_date(climate_state['flood_last_off_time'], 'Last flood off time')
+
         s = s + 'Last state file write: {}\n'.format(datetime.datetime.fromtimestamp(
                                                      climate_state['last_state_file_update_time']).isoformat())
         return s
@@ -283,7 +287,10 @@ def init_state(args):
     climate_state['air_heater_last_on_time'] = None
     climate_state['air_heater_last_off_time'] = None
 
-    # climate_state['cur_time'] = 0 
+    climate_state['flood_on'] =  False
+    climate_state['flood_last_on_time'] = None
+    climate_state['flood_last_off_time'] = None
+
     climate_state['last_log_time'] = 0
     climate_state['log_cycle'] = False
 
@@ -395,8 +402,74 @@ def check_lights(controller):
             controller['cmd']('off', 'grow_light')
 
 
+def run_interval_loop(controller, loop_name, curr_on_state, last_on_time):
+
+    global climate_state
+
+    values = get_current_recipe_step_values(loop_name, ('interval', 'duration'))
+    turn_on = None
+
+    if values != None and last_on_time != None:
+        if curr_on_state and\
+           climate_state['cur_time'] - last_on_time > 60 * values['duration']:
+            turn_on = False
+        elif not curr_on_state and\
+               climate_state['cur_time'] - last_on_time > 60 * values['interval']:
+            turn_on = True
+        else:
+            # Waiting for next transition to on or off so leave the actuator in it's current state.
+            turn_on = curr_on_state 
+    elif values != None and last_on_time == None:
+        # Assume this is a startup state.  There are recipe values for the actuator but 
+        # no history so go ahead and start a cycle.
+        turn_on = True
+    else:
+        # There are no recipe values for this actuator so don't turn it on.
+        turn_on = False
+
+    if turn_on == None:
+        logger.error('{} controller/recipe error. No action could be determined.'.format(loop_name))
+
+    return turn_on
+
+def run_flood_loop(controller):
+
+    on = run_interval_loop(controller, 'flood', climate_state['flood_on'], 
+                           climate_state['flood_last_on_time']) 
+
+    # Turn flood on/off if necessary
+    if on and not climate_state['flood_on']:
+        logger.info('turning flood on')
+        climate_state['flood_on'] = True
+        climate_state['flood_last_on_time'] = climate_state['cur_time']
+        controller['cmd']('on', 'water_circ_pump')
+
+    if not on and climate_state['flood_on']:
+        logger.info('turning flood off')
+        climate_state['flood_on'] = False
+        climate_state['flood_last_off_time'] = climate_state['cur_time']
+        controller['cmd']('off', 'water_circ_pump')
+    
+    
 def run_air_flush_loop(controller):
 
+    flush_on = run_interval_loop(controller, 'air_flush', climate_state['air_flush_on'], 
+                                 climate_state['air_flush_last_on_time']) 
+
+    # Turn flush on/off if necessary
+    if flush_on and not climate_state['air_flush_on']:
+        logger.info('turning air flush on')
+        climate_state['air_flush_on'] = True
+        climate_state['air_flush_last_on_time'] = climate_state['cur_time']
+
+    if not flush_on and climate_state['air_flush_on']:
+        logger.info('turning air flush off')
+        climate_state['air_flush_on'] = False
+        climate_state['air_flush_last_off_time'] = climate_state['cur_time']
+
+    return flush_on
+
+    """-
     global climate_state
 
     values = get_current_recipe_step_values('air_flush', ('interval', 'duration'))
@@ -436,19 +509,29 @@ def run_air_flush_loop(controller):
         climate_state['air_flush_last_off_time'] = climate_state['cur_time']
 
     return flush_on
+    """
 
 
 def check_circ_fan(controller):
 
     global climate_state
 
-    #turn the circulation fan on and leave it on.
-    if not climate_state['circ_fan_on']: 
+    values = get_current_recipe_step_values('circ_fan', ('value',))
 
-        logger.info('turning circulation fan on') 
-        climate_state['circ_fan_on'] = True
-        climate_state['circ_fan_last_on_time'] = climate_state['cur_time']
-        controller['cmd']('on', 'circ_fan') 
+    if values != None and values['value'] == 1:
+        #turn the circulation fan on
+        if not climate_state['circ_fan_on']: 
+
+            logger.info('turning circulation fan on') 
+            climate_state['circ_fan_on'] = True
+            climate_state['circ_fan_last_on_time'] = climate_state['cur_time']
+            controller['cmd']('on', 'circ_fan') 
+    else:
+        if climate_state['circ_fan_on']: 
+            logger.info('turning circulation fan off') 
+            climate_state['circ_fan_on'] = False 
+            climate_state['circ_fan_last_off_time'] = climate_state['cur_time']
+            controller['cmd']('off', 'circ_fan') 
 
 def run_heating_loop(controller, hysteresis):
 
@@ -575,9 +658,6 @@ def run_cooling_loop(hw_int, hysteresis) -> bool:
 
     return cooler_on 
 
-# TODO: Need to make the air temp function adaptible so that it knows to use the vent fan if there is no 
-# heater.  Then if it uses the vent fan the cc needs to look at both the vent fan and the air temp fucntion
-# to see if either wants it on.
 def run_air_flush_and_cooling_loop(hw_int, hysteresis: int):
 
     global climate_state
@@ -586,9 +666,6 @@ def run_air_flush_and_cooling_loop(hw_int, hysteresis: int):
     # air temperature and air flushes.
     cooling_on = run_cooling_loop(hw_int, hysteresis)
     flush_on = run_air_flush_loop(hw_int)
-
-    #- logger.info('cooling on: {}'.format(cooling_on))
-    #- logger.info('flush on: {}'.format(flush_on))
 
     if (cooling_on or flush_on) and not climate_state['vent_fan_on']:
         logger.info('turning vent fan on')
@@ -701,18 +778,24 @@ def start(app_state, args, barrier):
 
                update_climate_state(args['min_log_period'], hw_int)
 
-               if args['has_circ_fan_control']:
-                   check_circ_fan(hw_int)
+               #- has_circ_fan_control is known by the hardware module - move it there.
+               #- if args['has_circ_fan_control']:
+               check_circ_fan(hw_int)
 
                check_lights(hw_int)
 
-               if args['has_air_heater_control']:
-                   run_heating_loop(hw_int, args['hysteresis'])
+               #- has_air_heater_control is known by the hardware module (e.g. 
+               #- openag_micro_fc2). Move it there.
+               #- if args['has_air_heater_control']:
+               run_heating_loop(hw_int, args['hysteresis'])
 
                # The vent is used for air cooling as well as for air flushes. 
                # If either the cooler or the air flusher wants the vent fan on then
                # turn it on.
                run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
+
+               # The flood loop is used for flood and drain systems.
+               run_flood_loop(hw_int)
 
            # Every once in a while write the state to the state file to make sure the file 
            # stays up to date.  TBD: A more sophisticated system would write only when

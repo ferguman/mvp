@@ -20,8 +20,15 @@ logger = get_sub_logger(__name__)
 
 def start(app_state, args, barrier):
 
-    #- print('starting Flask version ...')
-    #- app.logger.info('starting Flask version {}'.format(__version__))
+    '''
+    args is a dictionary.  The following arg values are supported:
+
+    chart_list_source: If there is a resource that can create chart files then use the
+                       the name here (e.g. 'chart_list_source':'wc'). If there
+                       are no charts available on this fopd then set this value to None
+                       (e.g. 'chart_list_source':None)
+    '''
+
     logger.info('starting Flask version {}'.format(__version__))
 
     app = fopdwFlask(__name__)

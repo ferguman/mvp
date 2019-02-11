@@ -16,7 +16,7 @@ logger = get_sub_logger(__name__)
 # All the micro-controller sensor names will be put in the reading_names dictionary
 reading_names = {}
 
-def make_get(vals, reading_names:dict)->'func':
+def make_get(vals, reading_names:dict) -> 'func':
 
     def get(value_name):
         if value_name in reading_names:
@@ -36,7 +36,7 @@ serial_interface_lock = Lock()
 
 # target_indexes and cur_command will be filled based upon the configuration setting.
 target_indexes = []
-    cur_command = []
+cur_command = []
 
 cur_mc_cmd_str = None
 old_mc_cmd_str = None
@@ -375,32 +375,32 @@ def start(app_state, args, b):
 
     # Initialize the reading (i.e. sensor outputs) and target (i.e. actuator inputs) information.
     #
-    global reading_names, target_indexes, cur_command
-    reading_names = args['reading_names']
-    target_indexes =  args['target_indexes']
-    cur_command = [0 for i in range(0, len(target_indexes))]
-    app_state[args['name']] = {} 
-    vals = app_state[args['name']]['sensor_readings'] = args['sensor_reading_types'] 
+    global reading_names
+    reading_names = args['sensor_reading_names']
 
     # Start a serial connection with the Aruduino - Note that this resets the Arduino.
     ser = start_serial_connection(args)
 
-    # We have one state variable so no need of a state structure
+    # We have one state variable (i.e. camera_pose) so no need of a state structure
     mc_state = {}
     mc_state['camera_pose'] = None
 
     # Initilize the actuators
     global target_indexes, cur_command
+    #- target_indexes =  args['target_indexes']
     target_indexes = args['command_set'] 
+    #- cur_command = [0 for i in range(0, len(target_indexes))]
     cur_command = [0] * len(target_indexes) 
 
     # Inject your commands into app_state.
+    app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
     app_state[args['name']]['cmd'] = make_cmd(mc_state, ser)
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    
-    app_state[args['name']]['get'] = make_get(vals)
+    vals = app_state[args['name']]['sensor_readings'] = args['sensor_readings'] 
+    app_state[args['name']]['get'] = make_get(args['sensor_readings'], args['sensor_reading_names'])
 
     # Start the fc loop and and let it run for n seconds where n = args['mc_start_delay'].
     # 10 is recommened for the fc version 1 in order to wait for the
