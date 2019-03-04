@@ -453,6 +453,8 @@ def run_flood_loop(controller):
     
 def run_air_flush_loop(controller):
 
+    global climate_state
+
     flush_on = run_interval_loop(controller, 'air_flush', climate_state['air_flush_on'], 
                                  climate_state['air_flush_last_on_time']) 
 

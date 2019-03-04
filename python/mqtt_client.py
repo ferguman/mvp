@@ -80,6 +80,9 @@ def start_paho_mqtt_client(args, app_state, publish_queue):
 
         mqtt_client.tls_set()
 
+        # TODO: This software is currently embedded in the fopd codebase. fopd is a thing not a person so
+        # a client certificate should be used here, not a username, password pair.
+        #
         mqtt_client.username_pw_set(args['mqtt_username'], decrypt(args['mqtt_password_b64_cipher']))
 
         mqtt_client.connect(args['mqtt_url'], args['mqtt_port'], 60)
