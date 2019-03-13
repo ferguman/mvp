@@ -15,72 +15,25 @@ logger = get_sub_logger(__name__)
 
 # All the micro-controller sensor names will be put in the reading_names dictionary
 reading_names = {}
-#- reading_names = {'humidity':0, 'air_temp':1, 'light_lum':2, 'light_par':3, 'air_co2':4, 'ph':5, 'water_temp':6, 
-#-                 'water_ec':7, 'shell_off':8, 'window_off':9}
 
-def make_get(vals):
+def make_get(vals, reading_names:dict) -> 'func':
 
     def get(value_name):
         if value_name in reading_names:
-            return vals[reading_names[value_name]] #vals[reading_names[value_name]]
+            return vals[reading_names[value_name]]
         else:
             return 'illegal value_name. Please specify one of {}.'.format(reading_names)
 
     return get
 
-"""-
 # Sensor readings are defined in the configuration file
 #
-def create_sensor_reading_dict(args):
-
-   return args['sensor_reading_dict']
-
-   return [
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'air', 'subject_location_id':args['air_location_id'], 
-                'attribute':'humidity', 'value':None, 'units':'Percentage', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'air', 'subject_location_id':args['air_location_id'], 
-                'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'light', 'subject_location_id':args['grow_light_location_id'], 
-                'attribute':'lum', 'value':None, 'units':'lm', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'light', 'subject_location_id':args['grow_light_location_id'], 
-                'attribute':'par', 'value':None, 'units':'mol/sec', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'air', 'subject_location_id':args['air_location_id'], 
-                'attribute':'co2', 'value':None, 'units':'ppm', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'water', 'subject_location_id':args['water_location_id'], 
-                'attribute':'ph', 'value':None, 'units':'None', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'water', 'subject_location_id':args['water_location_id'], 
-                'attribute':'temperature', 'value':None, 'units':'Celsius', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'water', 'subject_location_id':args['water_location_id'], 
-                'attribute':'ec', 'value':None, 'units':'mS/cm', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'air', 'subject_location_id':args['air_location_id'], 
-                'attribute':'shell_off', 'value':None, 'units':'None', 'ts':None},
-               {'type':'environment', 'device_name':'arduino', 'device_id':args['device_id'],
-                'subject':'air', 'subject_location_id':args['air_location_id'], 
-                'attribute':'window_off', 'value':None, 'units':'None', 'ts':None},
-   ]
-"""
 
 # Provide a lock so that multiple threads are forced to wait for commands that
 # use the Arudiuno serial interface
 #
 serial_interface_lock = Lock()
 
-# FC1 Command Set -> humidifier, grow_light, ac_3, air_heat,
-#                    vent fan, circulation fan, chamber lights, motherboard lights.
-#
-"""-
-target_indexes = {'humidifier':0, 'grow_light':1, 'ac 3 switch':2,'air_heat':3, 
-                  'vent_fan':4, 'circ_fan':5, 'chamber_lights':6, 'mb_lights':7}
-"""
 # target_indexes and cur_command will be filled based upon the configuration setting.
 target_indexes = []
 cur_command = []
@@ -129,7 +82,6 @@ def make_fc_cmd(mc_state):
 
     return cmd + b'\n'
 
-
 def extract_sensor_values(mc_response, vals):
 
     # Note these globals -> global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
@@ -167,7 +119,6 @@ def extract_sensor_values(mc_response, vals):
         logger.error('Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
         for r in vals:
             r['value'] = None
-
 
 def make_help(args):
 
@@ -364,11 +315,14 @@ def send_mc_cmd(ser, cmd_str):
         old_mc_cmd_str = cur_mc_cmd_str
         cur_mc_cmd_str = cmd_str 
         old_mc_response = cur_mc_response
-    
+   
+        logger.debug('arduino command: {}'.format(cmd_str))
         ser.write(cmd_str)
         mc_response = ser.read_until(b'OK\r\n')
         logger.debug('arduino response {}'.format(mc_response))
         ser.reset_input_buffer()
+    except:
+        logger.error('serial interface error {}, {}'.format(exc_info()[0], exc_info()[1]))
     finally:
         serial_interface_lock.release()
 
@@ -389,7 +343,7 @@ def start_serial_connection(args):
     logger.info('starting openag microcontroller monitor for food computer version 1')
 
     # Starting the serial port resets the Arduino. 
-    ser = serial.Serial(args['serial_port'], args['baud_rate'])
+    ser = serial.Serial(args['serial_port'], args['baud_rate'], timeout=args['serial_timeout'])
 
     # The Arduino should respond with the serial  monitor salutation (i.e. 
     # "OpenAg Serial Monitor Starting" and any warnings or errors generated by the modules during
@@ -421,27 +375,32 @@ def start(app_state, args, b):
 
     # Initialize the reading (i.e. sensor outputs) and target (i.e. actuator inputs) information.
     #
-    global reading_names, target_indexes, cur_command
-    reading_names = args['reading_names']
-    target_indexes =  args['target_indexes']
-    cur_command = [0 for i in range(0, len(target_indexes))]
-    app_state[args['name']] = {} 
-    vals = app_state[args['name']]['sensor_readings'] = args['sensor_reading_types'] 
+    global reading_names
+    reading_names = args['sensor_reading_names']
 
     # Start a serial connection with the Aruduino - Note that this resets the Arduino.
     ser = start_serial_connection(args)
 
-    # We have one state variable so no need of a state structure
+    # We have one state variable (i.e. camera_pose) so no need of a state structure
     mc_state = {}
     mc_state['camera_pose'] = None
 
+    # Initilize the actuators
+    global target_indexes, cur_command
+    #- target_indexes =  args['target_indexes']
+    target_indexes = args['command_set'] 
+    #- cur_command = [0 for i in range(0, len(target_indexes))]
+    cur_command = [0] * len(target_indexes) 
+
     # Inject your commands into app_state.
+    app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
     app_state[args['name']]['cmd'] = make_cmd(mc_state, ser)
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
    
-    app_state[args['name']]['get'] = make_get(vals)
+    vals = app_state[args['name']]['sensor_readings'] = args['sensor_readings'] 
+    app_state[args['name']]['get'] = make_get(args['sensor_readings'], args['sensor_reading_names'])
 
     # Start the fc loop and and let it run for n seconds where n = args['mc_start_delay'].
     # 10 is recommened for the fc version 1 in order to wait for the

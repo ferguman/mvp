@@ -6,22 +6,10 @@ from nacl import secret, utils
 
 #+ from config.private_key import nsk_b64
 
-"""-
-def encrypt(plain_text: 'binary string') -> 'b64 string':
-
-    return standard_b64encode(secret.SecretBox(standard_b64decode(nsk_b64)).encrypt(plain_text))
-"""
-
 def encrypt(plain_text: 'binary string') -> 'b64 string':
 
     with SecretKey() as nsk:
         return standard_b64encode(secret.SecretBox(bytes(nsk)).encrypt(plain_text))
-
-""" -
-def decrypt(ciper_text) -> 'binary string': 
-
-    return secret.SecretBox(standard_b64decode(nsk_b64)).decrypt(standard_b64decode(ciper_text))
-"""
 
 def decrypt(ciper_text) -> 'binary string': 
 

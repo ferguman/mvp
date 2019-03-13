@@ -13,8 +13,7 @@ def start(app_state, args, b):
    logger.info('starting web chart generator controller')
    logger.setLevel(args['log_level'])
 
-   #- app_state['sys']['chart_list'] = args['chart_list']
-   app_state[args['name']]['chart_list'] = args['chart_list']
+   app_state[args['name']] = {'chart_list':args['chart_list']}
 
    # Set the intial timestamp to 0 thus forcing a web chart generation at start up.
    state = {'last_charting_ts':0, 'last_chart_generation_date':None}
