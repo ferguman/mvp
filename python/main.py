@@ -8,9 +8,11 @@ from python.logger import get_top_level_logger
 
 def execute_main(args):
 
-    # NOTE: This import is unusually. It is placed here because one cannot assume that that a config file
-    #       exists when fopd.py is run. For example the first time fopd.py is run there may not be a config
+    # NOTE: The placement of this import statement is important. It is placed here because one 
+    #       cannot assume that a config file exists when fopd.py is run. For example the 
+    #       first ever time fopd.py is run there may not be a config
     #       file yet.  So make sure that execute_main is only called once in the program.
+    #
     from config.config import system, device_name
 
     logger = get_top_level_logger(device_name)
