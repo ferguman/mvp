@@ -10,16 +10,18 @@ from time import sleep, time
 
 import datetime
 from json import dump, dumps, load 
-#- import time
 
 from python.logData import logDB
 from python.logger import get_sub_logger
+from python.LogFileEntryTable import LogFileEntryTable
 
 # Provide a lock to control access to the climate controller state
 #
 state_lock = Lock()
 
 logger = get_sub_logger(__name__)
+
+log_entry_table = LogFileEntryTable(60*60)
 
 # State variables:
 climate_state = {} 
@@ -40,11 +42,9 @@ def load_recipe_file(rel_path):
 
         with open(recipe_path) as f:
             try:
-                #- recipe = json.load(f)
                 climate_state['recipe'] = load(f)
             except:
-                logger.error('cannot parce recipe file.')
-        
+                logger.error('cannot parse recipe file {}, {}, {}.'.format(recipe_path, exc_info()[0], exc_info()[1]))
     else:
         logger.error('no recipe file found. the climate controller cannot run without a recipe file.')
 
@@ -60,7 +60,6 @@ def load_state_file(rel_path):
         
         with open(state_file_path) as f:
             try:
-                #- global climate_state
                 climate_state = load(f)
             except:
                 logger.error('cannot load state file.')
@@ -368,7 +367,8 @@ def get_current_recipe_step_values(step_name, value_names):
                 logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
 
     except:
-        logger.error('failed looking for step values: {}, {}, {}'.format(step_name, exc_info()[0], exc_info()[1]))
+        log_entry_table.add_log_entry(logger.error, 
+            'failed looking for step values: {}, {}, {}'.format(step_name, exc_info()[0], exc_info()[1]))
 
     return values
 
@@ -738,11 +738,14 @@ def update_climate_state(min_log_period, controller):
     else:
         climate_state['log_cycle'] = False
 
-    at = controller['get']('air_temp')['value']
+    #- at = controller['get']('air_temp')['value']
+    at = controller['get']('air_temp')
     try:
-        climate_state['cur_air_temp'] = float(at)
+        climate_state['cur_air_temp']['value'] = float(at)
     except:
-        log_if_log_cycle(WARNING,'cannot read air temperature. value returned by source is {}'.format(at)) 
+        log_entry_table.add_log_entry(logger.warning, 
+            'cannot read air temperature. value returned by source is {}'.format(at))
+        #- log_if_log_cycle(WARNING,'cannot read air temperature. value returned by source is {}'.format(at)) 
         #- if climate_state['log_cycle']:
         #-    logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
 
@@ -763,10 +766,23 @@ def start(app_state, args, barrier):
     app_state[args['name']]['recipe'] = show_recipe
     app_state[args['name']]['state'] = show_state
 
+    # Load current state and recipe
     init_state(args)
 
     # Don't proceed until all the other resources are available.
     barrier.wait()    
+
+    ''' TODO - add a compiler to create the control loops
+    # Compile recipe to create a control loop
+    control_loop =  compile_recipe(): 
+    if not control_loop:
+        app_state['stop'] = True
+    '''
+
+    #- For now instead of compiling create the control loops by hand.
+    control_loops = [
+        {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]}
+    ]
 
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
@@ -779,25 +795,28 @@ def start(app_state, args, barrier):
            if climate_state['run_mode'] == 'on': 
 
                update_climate_state(args['min_log_period'], hw_int)
+              
+               for loop in control_loops:
+                   loop['func'](*loop['args'])
 
                #- has_circ_fan_control is known by the hardware module - move it there.
                #- if args['has_circ_fan_control']:
-               check_circ_fan(hw_int)
+               #- check_circ_fan(hw_int)
 
-               check_lights(hw_int)
+               #- check_lights(hw_int)
 
                #- has_air_heater_control is known by the hardware module (e.g. 
                #- openag_micro_fc2). Move it there.
                #- if args['has_air_heater_control']:
-               run_heating_loop(hw_int, args['hysteresis'])
+               #- run_heating_loop(hw_int, args['hysteresis'])
 
                # The vent is used for air cooling as well as for air flushes. 
                # If either the cooler or the air flusher wants the vent fan on then
                # turn it on.
-               run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
+               #- run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
 
                # The flood loop is used for flood and drain systems.
-               run_flood_loop(hw_int)
+               #- run_flood_loop(hw_int)
 
            # Every once in a while write the state to the state file to make sure the file 
            # stays up to date.  TBD: A more sophisticated system would write only when
@@ -807,7 +826,6 @@ def start(app_state, args, barrier):
 
        finally:
            state_lock.release()
-
 
        sleep(1)
 

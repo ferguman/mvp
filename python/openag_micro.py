@@ -11,7 +11,12 @@ import re
 import serial
 
 from python.logger import get_sub_logger 
+from python.LogFileEntryTable import LogFileEntryTable
+
 logger = get_sub_logger(__name__)
+
+# TODO - make the log file interval a configuration file parameter.
+log_entry_table = LogFileEntryTable(60 * 60)
 
 # All the micro-controller sensor names will be put in the reading_names dictionary
 reading_names = {}
@@ -22,7 +27,10 @@ def make_get(vals, reading_names:dict) -> 'func':
         if value_name in reading_names:
             return vals[reading_names[value_name]]
         else:
-            return 'illegal value_name. Please specify one of {}.'.format(reading_names)
+            log_entry_table.add_log_entry(logger.error, 
+                'illegal value_name. Please specify one of {}.'.format(reading_names))
+            return None
+            #- return 'illegal value_name. Please specify one of {}.'.format(reading_names)
 
     return get
 
@@ -82,6 +90,7 @@ def make_fc_cmd(mc_state):
 
     return cmd + b'\n'
 
+
 def extract_sensor_values(mc_response, vals):
 
     # Note these globals -> global old_mc_cmd_str, cur_mc_cmd_str, old_mc_response, cur_mc_response
@@ -116,7 +125,10 @@ def extract_sensor_values(mc_response, vals):
         # status_code is a whole number that gives sensor specific satus or error info
         # status_msg is a human readable description of what the status code means.
         #
-        logger.error('Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
+        #- logger.error('Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
+        log_entry_table.add_log_entry(
+            logger.error, 'Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
+
         for r in vals:
             r['value'] = None
 
@@ -268,7 +280,8 @@ def log_mc_response(response):
         elif msg[0:1] == '1':
             logger.warning('micro warning: {}'.format(msg))
         elif msg[0:1] == '2':
-            logger.error('micro error: {}'.format(msg))
+            log_entry_table.add_log_entry(logger.error, 'micro error: {}'.format(msg))
+            #- logger.error('micro error: {}'.format(msg))
         elif msg[0:30] == 'OpenAg Serial Monitor Starting':
             logger.info('micro reset detected: {}'.format(msg))
         else:
