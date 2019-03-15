@@ -30,12 +30,11 @@ See the "Hardware Compatibility" page in the wiki.
 
 - Dill (next release)
 - [Carrot](https://github.com/ferguman/fopd/wiki/Install-fopd-carrot)Carrot (current release)
-- [blossom](https://github.com/ferguman/fopd/wiki/Install-fopd-blossom)
+- [Blossom](https://github.com/ferguman/fopd/wiki/Install-fopd-blossom)
  (drepecated)  
 
 
 ## Future Development (in no priority):
-- Next release name: dill 
 - Extend functionality of the web interface for controlling/monitoring/configuring
 - Implement the ability for installation and setup to be done via a cloud service
 - Allow headless configuration of new fopd installations
