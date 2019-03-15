@@ -20,4 +20,4 @@ class LogFileEntryTable(object):
 
         if entry_val not in self.log_entries.keys() or self.log_entries[entry_val] < time() - self.interval:
             self.log_entries[entry_val] = time()
-            func(entry_val)
+            func('({} sec. throttle) '.format(self.interval) + entry_val)

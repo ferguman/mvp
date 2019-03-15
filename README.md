@@ -1,56 +1,43 @@
-# fopd -> farm operations platform (fop) device
+# fopd -> farm operation platform (fop) device
 
 This is a fork of the [MVP II](https://github.com/webbhm/OpenAg-MVP-II).
 
 It maintains the same functionality as the MVP and adds some additional features in order to make it compatible with other
-grow environments such as the Food Computer V1.
+grow environment devices.
 
 Many thanks to the team that created the MVP II code and hardware designs.
 
 ## Background 
 
-Python code that can be configured to peform the same functions as the MVP II.  The goals of the project are:
+fopd is a python based program that can be configured to operate grow systems such as the MVP II and the Openag Food Computers. 
+The goal is to make the code agnostic as to the grow environment that it operates and thus configurable as a controller for custom and 
+modified grow devices (e.g. automatic dosers, light timers) and environments (e.g. Food Computer version II or a custom germinator that someone may build).  The goals of the project are:
 
-- Target other grow enviroments and MVP modifications (e.g. add PH probe to an MVP system).   
-- Provide "easy button" functionality such as headless installation
-- Provide interoperability with a cloud based MVP learning environment that allows students and teachers to manage their MVPs from a cloud application.
-- Provide interoperability with commercial cloud based grow management platforms.
-
+- Target as many grow environments, devices, sensors and actuators as possible.
+- Accommodate both the DIY builder and the needs of commercial and academic users. 
+- Provide interoperability with the FutureAg API and the Urban Space Farms fop API
+- Be free to adopt and extend, hence the MIT license 
 
 ## Architecture:
 
-Upon boot the main program (mvp.py) reads the local configuration file (config/config.py) and spawns threads for
-each resource located in the configuration file.
+See the wiki page titled "Architecture".
 
 ## Hardware Build:
 
-Refer to [MVP II](https://github.com/webbhm/OpenAg-MVP-II) for the details on the hardware build of an MVP. The goal of this project is break 
-dependencies between the brain code and the hardware that it will be used on.  Of course at the end of the day everything needs to be compatible but we hope to provide configuration flexiblity so that this code can be used with any grow environment that contains compatible sensors and
-actuators.
+See the "Hardware Compatibility" page in the wiki.
 
 ### Versions
 
-- Blossom is the current release build.  
-- Carrot will be the next release.
+- Dill (next release)
+- [Carrot](https://github.com/ferguman/fopd/wiki/Install-fopd-carrot)Carrot (current release)
+- [blossom](https://github.com/ferguman/fopd/wiki/Install-fopd-blossom)
+ (drepecated)  
 
-[blossom build](https://github.com/ferguman/openag-mvp/wiki/Install-mvp-blossom)
-
-## Changes implemented in blossom : 
-
-  - Configuration information is stored in a configuration file named config.py.
-  - cron is not needed to operate the system.
-  - MQTT has been added.  This allows sensor readings to be sent to a cloud MQTT broker.
-  - Data logging has been changed to use the Python logging facility
-
-## Changes planned for carrot:
-
-  - Image upload to the cloud.
-  - Compatibility with the Food Computer Version 1
-  - Make setup simpler and run within a Pthon venv
 
 ## Future Development (in no priority):
-- Next release name: carrot
-- GUI interface for controlling/monitoring/configuring
-- Receive commands via MQTT
-- Allow headless configuration of new mvp installations
+- Next release name: dill 
+- Extend functionality of the web interface for controlling/monitoring/configuring
+- Implement the ability for installation and setup to be done via a cloud service
+- Allow headless configuration of new fopd installations
 - Cloud backup of configuration file
+- Implement firmware updates via Yocto/Mender
