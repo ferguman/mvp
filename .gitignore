@@ -14,6 +14,7 @@ config/*
 !config/.gitkeep
 !config/base.j2
 !config/config_fc1.j2
+!config/templates
 pictures/*.*
 !pictures/.gitkeep
 state/*.*
