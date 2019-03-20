@@ -18,10 +18,13 @@
         { "air_temperature": [
             {"start_time": 0, "end_time": 23, "high_limit":29, "low_limit": 16}],
           "light_intensity": [
-            {"start_time": 8, "end_time": 15, "value": 1},
-            {"start_time": 16, "end_time": 23, "value": 0}],
+            {"start_time": 0, "end_time": 10, "value": 1},
+            {"start_time": 11, "end_time": 16, "value": 0},
+            {"start_time": 17, "end_time": 23, "value": 1}],
           "air_flush": [
-            {"start_time": 0, "end_time": 23, "interval": 15, "duration": 2}]
+            {"start_time": 0, "end_time": 23, "interval": 15, "duration": 2}],
+          "circ_fan": [
+            {"start_time": 0, "end_time": 23, "value": 0}]
         }
     },
     { "name": "growth",
@@ -35,7 +38,9 @@
             {"start_time": 11, "end_time": 16, "value": 0},
             {"start_time": 17, "end_time": 23, "value": 1}],
           "air_flush": [
-            {"start_time": 0, "end_time": 23, "interval": 15, "duration": 2}]
+            {"start_time": 0, "end_time": 23, "interval": 15, "duration": 2}],
+          "circ_fan": [
+            {"start_time": 0, "end_time": 23, "value": 1}]
         }
     }
   ]

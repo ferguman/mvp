@@ -32,9 +32,10 @@ def load_recipe_file(rel_path):
 
     global climate_state
 
-    climate_state['recipe'] = None
+    #- climate_state['recipe'] = None
 
-    recipe_path = getcwd() + rel_path
+    #- recipe_path = getcwd() + rel_path
+    recipe_path = path.join(getcwd() + rel_path) 
     logger.info('loading recipe file: {}'.format(recipe_path))
 
     if path.isfile(recipe_path):
@@ -43,10 +44,16 @@ def load_recipe_file(rel_path):
         with open(recipe_path) as f:
             try:
                 climate_state['recipe'] = load(f)
+                return (True, 'OK')
             except:
-                logger.error('cannot parse recipe file {}, {}, {}.'.format(recipe_path, exc_info()[0], exc_info()[1]))
+                msg = 'cannot load and parse recipe file {}, {}, {}.'.format(recipe_path, exc_info()[0], exc_info()[1])
+                logger.error(msg)
     else:
-        logger.error('no recipe file found. the climate controller cannot run without a recipe file.')
+        msg = 'No recipe file found at {}. The climate controller cannot run without a recipe file.'.format(recipe_path)
+        logger.error(msg)
+        
+    return (False, msg)
+    
 
 def load_state_file(rel_path):
 
@@ -74,7 +81,7 @@ def write_state_file(rel_path, update_interval: 'secs', force: bool):
     if force or (time() >= climate_state['last_state_file_update_time'] + update_interval):
 
         # Go ahead and log the update time even though the file write is not done. This way
-        # you want bang on the file system over and over in the presence of errors.
+        # you won't bang on the file system over and over in the presence of errors.
         climate_state['last_state_file_update_time'] = time()
        
         try:
@@ -99,7 +106,7 @@ def make_help(prefix):
         s = s + nul_pre + '                             supplied then start on day 0.\n'
         s = s + nul_pre + "                             e.g. {}.cmd('start', day_index=2) to start a recipe at 3rd day.\n".format(prefix)
         s = s + cmd_pre + "cmd('load_recipe'|'lr',\n" 
-        s = s + nul_pre + '    recipe_file=path)      - Load a recipe file. If no recipe_file argument is given\n'
+        s = s + nul_pre + '    recipe_path=path)      - Load a recipe file. If no recipe_file argument is given\n'
         s = s + nul_pre + '                             then load the default recipe file as specified in the configuration file.\n'
         s = s + nul_pre + "                           - e.g. {}.cmd('lr', recipe_path='/climate_recipes/test1.rcp')\n".format(prefix)
         s = s + cmd_pre + "cmd('stop')                - stop the current recipe.\n"
@@ -213,16 +220,17 @@ def make_cmd(config_args):
                     return 'OK'
                 elif args[0] == 'load_recipe' or args[0] == 'lr':
 
-                    if not 'recipe_file' in kwargs:
+                    if not 'recipe_path' in kwargs:
                         # TBD - Need to 1st check to make sure the file exists and then warn user if it does not exist.
-                        load_recipe_file(config_args['default_recipe_file'])
+                        res = load_recipe_file(config_args['default_recipe_file'])
                     else:
-                        load_recipe_file(kwargs['recipe_file'])
+                        res = load_recipe_file(kwargs['recipe_path'])
 
                     # write the climate state to disk
                     write_state_file(config_args['state_file'], 0, True)
                     
-                    return 'OK'
+                    #- return 'OK'
+                    return res[1] 
                 else:
                     return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
             else:
@@ -245,13 +253,17 @@ def init_state(args):
     climate_state['run_mode'] = 'off'
     climate_state['cur_phase_index'] = None
     climate_state['recipe_start_time'] = None
-    # make sure the state has a recipe in case there is no state file.
-    load_recipe_file(args['default_recipe_file'])
+    #- make sure the state has a recipe in case there is no state file.
+    #- load_recipe_file(args['default_recipe_file'])
 
     # See if there is previous state in a state file  and load it if you have it, otherwise
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
     climate_state['last_state_file_update_time'] = time()
+
+    # make sure the state has a recipe in case there is no state file.
+    if not climate_state['recipe']:
+        load_recipe_file(args['default_recipe_file'])
 
     now = datetime.datetime.now()
     climate_state['cur_min'] = now.minute
@@ -470,48 +482,6 @@ def run_air_flush_loop(controller):
         climate_state['air_flush_last_off_time'] = climate_state['cur_time']
 
     return flush_on
-
-    """-
-    global climate_state
-
-    values = get_current_recipe_step_values('air_flush', ('interval', 'duration'))
-    flush_on = None
-
-    if values != None and climate_state['air_flush_last_on_time'] != None:
-        if climate_state['air_flush_on'] and\
-           climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['duration']:
-
-            flush_on = False
-        elif not climate_state['air_flush_on'] and\
-               climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['interval']:
-            flush_on = True
-        else:
-            # Waiting for next transition to on or off so leave the fan in it's current state.
-            flush_on = climate_state['air_flush_on']
-    elif values != None and climate_state['air_flush_last_on_time'] == None:
-        # Assume this is a startup state.  There are recipe values for the flush flan but 
-        # no history on the flushing so go ahead and start a flush cycle.
-        flush_on = True
-    else:
-        # There are no recipe values for flushing so leave the fan off.
-        flush_on = False
-
-    if flush_on == None:
-        logger.error('air flush controller logic error. No flush determination was made.')
-
-    # Turn flush on/off if necessary
-    if flush_on and not climate_state['air_flush_on']:
-        logger.info('turning air flush on')
-        climate_state['air_flush_on'] = True
-        climate_state['air_flush_last_on_time'] = climate_state['cur_time']
-
-    if not flush_on and climate_state['air_flush_on']:
-        logger.info('turning air flush off')
-        climate_state['air_flush_on'] = False
-        climate_state['air_flush_last_off_time'] = climate_state['cur_time']
-
-    return flush_on
-    """
 
 
 def check_circ_fan(controller):
@@ -741,13 +711,10 @@ def update_climate_state(min_log_period, controller):
     #- at = controller['get']('air_temp')['value']
     at = controller['get']('air_temp')
     try:
-        climate_state['cur_air_temp']['value'] = float(at)
+        climate_state['cur_air_temp'] = float(at['value'])
     except:
         log_entry_table.add_log_entry(logger.warning, 
-            'cannot read air temperature. value returned by source is {}'.format(at))
-        #- log_if_log_cycle(WARNING,'cannot read air temperature. value returned by source is {}'.format(at)) 
-        #- if climate_state['log_cycle']:
-        #-    logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
+            'cannot read air temperature. value returned by source is {} {} {}'.format(at, exc_info()[0], exc_info()[1]))
 
     # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
     #             climate_state['last_log_time'], climate_state['log_cycle']))
@@ -772,20 +739,20 @@ def start(app_state, args, barrier):
     # Don't proceed until all the other resources are available.
     barrier.wait()    
 
-    ''' TODO - add a compiler to create the control loops
-    # Compile recipe to create a control loop
-    control_loop =  compile_recipe(): 
-    if not control_loop:
-        app_state['stop'] = True
-    '''
-
-    #- For now instead of compiling create the control loops by hand.
-    control_loops = [
-        {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]}
-    ]
-
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
+
+    # TODO - add a compiler to create the control loops
+    # TODO Need to determine the necessary control loops from the climate recipes 
+    #      and the avaialble hardware controllers and sensors.
+    #- For now instead of compiling create the control loops by hand.
+    control_loops = [
+        # {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]}
+        {'func': check_circ_fan, 'args':[hw_int]},
+        {'func': check_lights, 'args':[hw_int]},
+        {'func': run_heating_loop, 'args':[hw_int, args['hysteresis']]},
+        {'func': run_air_flush_and_cooling_loop, 'args':[hw_int, args['hysteresis']]}
+    ]
 
     while not app_state['stop']:
 
@@ -798,17 +765,6 @@ def start(app_state, args, barrier):
               
                for loop in control_loops:
                    loop['func'](*loop['args'])
-
-               #- has_circ_fan_control is known by the hardware module - move it there.
-               #- if args['has_circ_fan_control']:
-               #- check_circ_fan(hw_int)
-
-               #- check_lights(hw_int)
-
-               #- has_air_heater_control is known by the hardware module (e.g. 
-               #- openag_micro_fc2). Move it there.
-               #- if args['has_air_heater_control']:
-               #- run_heating_loop(hw_int, args['hysteresis'])
 
                # The vent is used for air cooling as well as for air flushes. 
                # If either the cooler or the air flusher wants the vent fan on then

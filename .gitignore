@@ -21,7 +21,7 @@ state/*.*
 state/*
 !state/.gitkeep
 fopd/
-web/
+web/*
+web/*.*
 !web/.gitkeep
-web/static/
 !web/static/.gitkeep
