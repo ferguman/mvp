@@ -376,7 +376,9 @@ def get_current_recipe_step_values(step_name, value_names):
 
         else:
             if climate_state['log_cycle']:
-                logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
+                log_entry_table.add_log_entry(logger.error, 
+                    'There are no recipe steps for: {}.  Why?'.format(step_name)) 
+                #- logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
 
     except:
         log_entry_table.add_log_entry(logger.error, 
@@ -747,7 +749,7 @@ def start(app_state, args, barrier):
     #      and the avaialble hardware controllers and sensors.
     #- For now instead of compiling create the control loops by hand.
     control_loops = [
-        # {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]}
+        {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]},
         {'func': check_circ_fan, 'args':[hw_int]},
         {'func': check_lights, 'args':[hw_int]},
         {'func': run_heating_loop, 'args':[hw_int, args['hysteresis']]},
@@ -766,16 +768,9 @@ def start(app_state, args, barrier):
                for loop in control_loops:
                    loop['func'](*loop['args'])
 
-               # The vent is used for air cooling as well as for air flushes. 
-               # If either the cooler or the air flusher wants the vent fan on then
-               # turn it on.
-               #- run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
-
-               # The flood loop is used for flood and drain systems.
-               #- run_flood_loop(hw_int)
-
            # Every once in a while write the state to the state file to make sure the file 
-           # stays up to date.  TBD: A more sophisticated system would write only when
+           # stays up to date.  
+           # TODO: A more sophisticated system would write only when
            # changes were made.
            #
            write_state_file(args['state_file'], args['state_file_write_interval'], False)
