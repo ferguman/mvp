@@ -262,7 +262,7 @@ def init_state(args):
     climate_state['last_state_file_update_time'] = time()
 
     # make sure the state has a recipe in case there is no state file.
-    if not climate_state['recipe']:
+    if 'recipe' not in climate_state or not climate_state['recipe']:
         load_recipe_file(args['default_recipe_file'])
 
     now = datetime.datetime.now()
@@ -686,7 +686,7 @@ def log_if_log_cycle(level, msg):
     if climate_state['log_cycle']:
         logger.log(level, msg)
 
-def update_climate_state(min_log_period, controller):
+def update_climate_state(min_log_period, control_loops):
 
     global climate_state
     
@@ -710,16 +710,46 @@ def update_climate_state(min_log_period, controller):
     else:
         climate_state['log_cycle'] = False
 
-    #- at = controller['get']('air_temp')['value']
-    at = controller['get']('air_temp')
-    try:
-        climate_state['cur_air_temp'] = float(at['value'])
-    except:
-        log_entry_table.add_log_entry(logger.warning, 
-            'cannot read air temperature. value returned by source is {} {} {}'.format(at, exc_info()[0], exc_info()[1]))
+    # Take an air temperature reading but only if one of the control functions needs the temperature.
+    for c in control_loops:
+        if c['need'] == 'air_temp' and c['enabled']:
+            at = controller['get']('air_temp')
+            try:
+                climate_state['cur_air_temp'] = float(at['value'])
+                break
+            except:
+                log_entry_table.add_log_entry(logger.warning, 
+                    'cannot read air temperature. value returned by source is {} {} {}'.format(at, exc_info()[0], exc_info()[1]))
 
-    # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
-    #             climate_state['last_log_time'], climate_state['log_cycle']))
+
+def create_control_loops(control_configs, app_state):
+
+    controls = []
+    
+    for c in control_configs:
+
+        if c['function'] == 'drain_and_flood':
+            controls.append({'func':run_flood_loop, 'enabled':c['enabled'], 
+                             'need':None, 'args':[app_state[c['hardware_interface']]]})
+
+        if c['function'] == 'circulation_fan':
+            controls.append({'func':check_circ_fan, 'enabled':c['enabled'],
+                             'need':None, 'args':[app_state[c['hardware_interface']]]})
+
+        if c['function'] == 'grow_lights':
+            controls.append({'func':check_lights, 'enabled':c['enabled'],
+                             'need':None, 'args':[app_state[c['hardware_interface']]]})
+
+        if c['function'] == 'air_heating':
+            controls.append({'func':run_heating_loop, 'enabled':c['enabled'], 
+                             'need':('air_temp',), 'args':[app_state[c['hardware_interface']], c['hysteresis']]})
+
+        if c['function'] == 'air_cooling':
+            controls.append({'func':run_air_flush_and_cooling_loop, 'enabled':c['enabled'], 
+                             'need':('air_temp',), 'args':[app_state[c['hardware_interface']], c['hysteresis']]})
+
+    return controls
+
 
 def start(app_state, args, barrier):
 
@@ -744,17 +774,7 @@ def start(app_state, args, barrier):
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
 
-    # TODO - add a compiler to create the control loops
-    # TODO Need to determine the necessary control loops from the climate recipes 
-    #      and the avaialble hardware controllers and sensors.
-    #- For now instead of compiling create the control loops by hand.
-    control_loops = [
-        {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]},
-        {'func': check_circ_fan, 'args':[hw_int]},
-        {'func': check_lights, 'args':[hw_int]},
-        {'func': run_heating_loop, 'args':[hw_int, args['hysteresis']]},
-        {'func': run_air_flush_and_cooling_loop, 'args':[hw_int, args['hysteresis']]}
-    ]
+    control_loops = create_control_loops(args['controls'], app_state) 
 
     while not app_state['stop']:
 
@@ -763,10 +783,12 @@ def start(app_state, args, barrier):
        try:
            if climate_state['run_mode'] == 'on': 
 
-               update_climate_state(args['min_log_period'], hw_int)
+               #- update_climate_state(args['min_log_period'], hw_int)
+               update_climate_state(args['min_log_period'], control_loops)
               
                for loop in control_loops:
-                   loop['func'](*loop['args'])
+                   if loop['enabled']:
+                       loop['func'](*loop['args'])
 
            # Every once in a while write the state to the state file to make sure the file 
            # stays up to date.  

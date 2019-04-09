@@ -65,14 +65,16 @@ def update_i2c_sensor_readings(i2c_bus, sensors: list):
             s.update_sensor_readings()
 
 
-def set_control_pins(controls, control_configs):
-    """Set the Raspberry PI control pins as per the current command state """
+def update_control_outputs(controls):
+    """Set the Raspberry PI control pins as per the current control state """
     
     for c in controls:
-        if control_configs['camera_pose'] and 'camera_pose' in c['config']:
-            set_gpio_pin(c['config']['camera_pose'], c['config']['active_high'], c['config']['pin_num'])
-        else:
-            set_gpio_pin(c['state'], c['config']['active_high'], c['config']['pin_num'])
+        if c['config']['type'] == 'digital_pin':
+            if ('camera_pose' in controls and controls['camera_pose']['state']) and\
+               ('camera_pose' in c['config'] and c['config']['camera_pose'] == 'on'):
+                set_gpio_pin('on', c['config']['active_high'], c['config']['pin_num'])
+            else:
+                set_gpio_pin(c['state'], c['config']['active_high'], c['config']['pin_num'])
 
 
 def set_gpio_pin(cmd, active_high: bool, pin_num: int):
@@ -83,7 +85,7 @@ def set_gpio_pin(cmd, active_high: bool, pin_num: int):
         GPIO.output(pin_num, 0)
 
 
-def make_values(value_config_list: list, values: list):
+def make_data_values(value_config_list: list, values: list):
 
     for c in value_config_list:
         if c['type'].lower() == 'digital_pin':
@@ -97,23 +99,26 @@ def make_values(value_config_list: list, values: list):
             logger.error('Value type {} is not supported'.format(command_configs['type']))
 
 
-
-def make_commands(command_configs: list, controls: list):
+def make_controls(control_configs: list, controls: list):
 
     #TODO - put in logic that checks that all config values are present and the values are ok 
     #       and that there are no bogus config settings.
     #TODO - currenlty we only accomadate digital_pins
-    for c in command_configs:
+    for c in control_configs:
         if c['type'].lower() == 'digital_pin':
             
             controls.append({'state':c['default'].lower(), 'config':c})
                 
             GPIO.setup(c['pin_num'], GPIO.OUT)
             set_gpio_pin(controls[-1]['state'], controls[-1]['config']['active_high'], controls[-1]['config']['pin_num'])
-            logger.info('Created digital pin {} output command named {}'.format(c['pin_num'], c['name']))
+            logger.info('Created digital pin {} output control named {}'.format(c['pin_num'], c['name']))
+
+        elif c['type'].lower() == 'boolean':
+            controls.append({'state':c['default'], 'config':c})
 
         else:
-            logger.error('Command type {} is not supported'.format(command_configs['type']))
+            logger.error('Control type {} is not supported'.format(c['type']))
+
 
 
 def make_help(args):
@@ -153,7 +158,8 @@ def get_control(name: str, controls: list):
 
     return None
 
-def make_cmd(controls: list, control_configs: dict):
+#- def make_cmd(controls: list, control_configs: dict):
+def make_cmd(controls: list):
 
     def cmd(*args): 
 
@@ -168,6 +174,26 @@ def make_cmd(controls: list, control_configs: dict):
                 else:
                     s = s + ', ' + c['config']['name']
             return s
+
+        # is it a true/false command
+        elif isinstance(cmd, (bool,)):
+            control = get_control(args[1], controls)
+
+            if control:
+
+                if cmd:
+                    if not control['state']:
+                        logger.info('Received {0} True command. Will set {0} to be True.'.format(control['config']['name']))
+                elif not cmd:
+                    if control['state']:
+                        logger.info('Received {0} False command. Will set {0} to be False.'.format(control['config']['name']))
+
+                control['state'] = cmd
+                return 'OK'
+
+            else:
+                logger.error('Unknown on/off command action received: {}'.format(args[1]))
+                return 'unknown target.'
 
         # is this an on or off command?
         elif cmd == 'on' or cmd == 'off':
@@ -190,20 +216,22 @@ def make_cmd(controls: list, control_configs: dict):
                 logger.error('Unknown on/off command action received: {}'.format(args[1]))
                 return 'unknown target.'
 
+        """ -
         # is this an on or off command?
         elif cmd == 'camera_pose' or cmd == 'cp':
 
             if args[1] == 'on':
-                control_configs['camera_pose'] = True 
+                control_state['camera_pose'] = True 
                 logger.info('posing for a picture')
                 return 'OK'
             elif args[1] == 'off':
-                control_configs['camera_pose'] = False
+                control_state['camera_pose'] = False
                 logger.info('will stop posing for a picture')
                 return 'OK'
             else:
                 logger.error('Unknown pose command action {}'.format(args[1]))
                 return 'Unknown pose command action {}'.format(args[1])
+        """
 
         logger.error('unknown command received: {}'.format(cmd))
         return "unknown cmd. Specify 'on' or 'off'"
@@ -214,17 +242,19 @@ def make_cmd(controls: list, control_configs: dict):
 # for debuging. The short form would be used by MQTT to get the state of the arduiono.
 # show_state('long' | 'short')
 #
-def make_show_state(overrides: dict, vals: list, controls: list):
+#- def make_show_state(overrides: dict, values: list, commands: list):
+def make_show_state(values: list, commands: list):
 
     def show_state():
 
-        s = 'Camera Pose is {}.\n'.format('on' if overrides['camera_pose'] else 'off')
+        # s = 'Camera Pose is {}.\n'.format('on' if overrides['camera_pose'] else 'off')
+        s = ''
 
-        for v in vals:
-            s = s + '{} = {} {}.\n'.format(v['value_name'], v['value'], v['units'])
+        for v in values:
+            s = s + '{} = {} ({}).\n'.format(v['config']['name'], v['state'], v['config']['units'])
 
-        s = s + 'there are {} controls.\n'.format(len(controls))
-        for c in controls:
+        s = s + 'there are {} controls.\n'.format(len(commands))
+        for c in commands:
             s = s + '{} is {}.\n'.format(c['config']['name'], c['state'])
 
         return s
@@ -240,44 +270,47 @@ def start(app_state, args, b):
     # These are variables hold the state of the controller: control configurations - currently
     # just camera pose, values - the current sensor readings, controls - the state and configuration
     # of each control point.
-    control_configs = {'camera_pose':False}
-    sensor_readings = []
+    # control_state = {'camera_pose':False}
+    # sensor_readings = []
     # vals = []
-    commands = []
-    values = []
+    controls = []
+    data_values = []
 
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    app_state[args['name']]['state'] = make_show_state(control_configs, sensor_readings, commands)
-    app_state[args['name']]['sensor_readings'] = sensor_readings 
-    app_state[args['name']]['get'] = make_get(sensor_readings)
+    #- app_state[args['name']]['state'] = make_show_state(control_state, data_values, controls)
+    app_state[args['name']]['state'] = make_show_state(data_values, controls)
+    #+ app_state[args['name']]['sensor_readings'] = get_sensor_readings(data_values)
+    #- app_state[args['name']]['get'] = make_get(vals)
+    app_state[args['name']]['get'] = make_get(data_values)
    
     # Initialize the i2c sensors.
     # TODO: Currently this controller only supports i2c sensors but hopefully, one-wire, and other
     #       types of sensors can be added gracefully.
     #- if 'i2c_bus' in args:
     #- i2c_sensors = make_sensor_list(args, vals)
-    i2c_sensors = make_sensor_list(args, sensor_readings)
+    #+ i2c_sensors = make_sensor_list(args, sensor_readings)
 
     # Setup the GPIO based inputs and outputs
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
-    make_commands(args['commands'], commands)
-    make_values(args['values'], values)
+    make_controls(args['controls'], controls)
+    make_data_values(args['data_values'], data_values)
 
-    app_state[args['name']]['cmd'] = make_cmd(commands, control_configs)
+    #- app_state[args['name']]['cmd'] = make_cmd(controls, control_state)
+    app_state[args['name']]['cmd'] = make_cmd(controls)
 
     # Let the system know that you are good to go.
     b.wait()
 
     while not app_state['stop']:
      
-        # Update fan and light switch digital control pins
-        set_control_pins(commands, control_configs)
+        # Update outputs 
+        update_control_outputs(controls)
 
         # Read the i2c sensors
-        update_i2c_sensor_readings(None, i2c_sensors) 
+        #+ update_i2c_sensor_readings(None, i2c_sensors) 
 
         sleep(1)
 
