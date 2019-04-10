@@ -29,7 +29,7 @@ See the "Hardware Compatibility" page in the wiki.
 ### Versions
 
 - Dill (next release)
-- [Carrot](https://github.com/ferguman/fopd/wiki/Install-fopd-carrot)Carrot (current release)
+- [Carrot](https://github.com/ferguman/fopd/wiki/Install-fopd-carrot)(current release)
 - [Blossom](https://github.com/ferguman/fopd/wiki/Install-fopd-blossom)
  (drepecated)  
 
