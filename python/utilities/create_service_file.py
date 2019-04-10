@@ -6,14 +6,14 @@ def create_service_file():
 
     """Create a Systemd service file named fopd.servic."""
 
+    #TODO: add a prompt for the username (e.g. pi)
     sd = {}
-    sd['working_directory'] = '/home/pi/fopd'
+    sd['working_directory'] = getcwd() 
     sd['user'] = 'pi'
-    sd['exec_start_cmd'] = '/home/pi/fopd/fopd/bin/python'
-    sd['exec_start_target'] = '/home/pi/fopd/fopd.py --silent'
+    sd['exec_start_cmd'] = path.join(getcwd(), 'fopd/bin/python')
+    sd['exec_start_target'] = path.join(getcwd(), 'fopd.py') + ' --silent'
     sd['restart_value'] = 'on-failure'
 
-    
     # generate the service file path
     sfp = path.join('/etc/systemd/system/', 'fopd.service')
     sfcp = path.join(getcwd(), 'config/systemd.service')
