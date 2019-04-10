@@ -15,7 +15,12 @@ def verify_config_file():
       if not path.isfile(config_livefile_path):
           
          # ask the user which config file they want.
-         print('There is no configuration file present. You are probably running this software for the first time.')
+         print('There is no configuration file present. Run the following commands:\n',
+               'python fopd.py -u create_private_key\n',
+               'python fopd.py -u create_system\n')
+         exit()
+         
+         """-
          print('Specify which configuration file type (either mvp or fc1) that you wish to use.')
 
          while True:
@@ -36,6 +41,7 @@ def verify_config_file():
         
          logger.info('No configuration file was found. Reverting to the mvp configuration file.')
          copyfile(config_defaultfile_path, config_livefile_path)
+         """
 
    except:
        logger.error('Could not verify configuration file: {}, {} exiting ...'.format(\

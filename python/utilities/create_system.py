@@ -100,6 +100,7 @@ def create_system():
     else:
         print('ERROR - unknown hardware type')
 
+
     config = {'identity':get_identity(cmd.lower()),
               'jwt':get_jwt_info(cmd.lower()), 
               'couchdb':get_couchdb_info(cmd.lower()),
@@ -129,8 +130,8 @@ def create_system():
     with open(cfp, 'w') as f:
         f.write(template.render(config=config))
 
-    print('Your configuration file has been written to {} replacing any existing file.'.format(cfp))
-    print('You can edit the configuration file by hand to change any settings.  Be sure to restart\n'+\
+    print('Your configuration file has been written to {} replacing any existing file.\n'.format(cfp),
+          'You can edit the configuration file by hand to change any settings.  Be sure to restart\n',
           'the fopd system after you save your edits.')
     
     return 'OK'

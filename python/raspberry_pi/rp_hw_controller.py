@@ -314,4 +314,5 @@ def start(app_state, args, b):
 
         sleep(1)
 
+    #TODO - add code that sets each control to it's default value when the resource is shutting down.
     logger.info('Raspberry Pi hardware interface thread stopping.')
