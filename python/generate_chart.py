@@ -14,7 +14,7 @@ enable_display_unit_error_msg = None
 # TODO: Current the system supports converting from celsius to fahrenheit. As the need arises
 #       add more unit conversions.
 #
-def apply_unit_conversion(val_tree, chart_info):
+def apply_unit_conversion(val_tree, chart_info, logger):
 
     global enable_display_unit_error_msg 
 
@@ -50,7 +50,7 @@ def get_chart_data(couchdb_url, chart_info, logger):
                      + 'startkey=["{0}","{1}",{2}]&endkey=["{0}"]&descending=true&limit=60'.format(
                      chart_info['attribute'], chart_info['couchdb_name'], '{}')
                      
-    # logger.debug('prepared couchdb query: {}'.format(couch_query))
+    logger.debug('prepared couchdb query: {}'.format(couch_query))
     
     try:
         r = requests.get(couch_query,
@@ -83,7 +83,7 @@ def generate_chart(couchdb_url, chart_info, logger):
             
             global enable_display_unit_error_msg
             enable_display_unit_error_msg = True
-            v_lst = [float(apply_unit_conversion(x, chart_info)) for x in data['rows']]
+            v_lst = [float(apply_unit_conversion(x, chart_info, logger)) for x in data['rows']]
 
             ts_lst = [datetime.fromtimestamp(x['value']['timestamp']).strftime('%m/%d %I:%M %p')\
                       for x in data['rows']]

@@ -31,16 +31,18 @@ def get_identity(sys_type: str) -> dict:
 
 def get_jwt_info(sys_type: str) -> dict:
 
-    vals = ('fop_jose_id', 'hmac_secret_key_b64_cipher')
+    vals = ('fop_jose_id', 'hmac_secret_key_b64_cipher', 'fws_url')
     prompts = {'fop_jose_id':'Enter the JWT id of the fop that you wish to connect to\n'+\
                              '(e.g. c0e94b7e-2ab9-45c7-9dfb-468f349c67a2)',
                'hmac_secret_key_b64_cipher':'Enter the value of your jose fop hmac secret key.\n'+\
-                                            'This is a 32 character URL safe random token provided by your fop provider.'} 
+                                            'This is a 32 character URL safe random token provided by your fop provider.',
+               'fws_url':'Enter the URL of your fopd web services server.'
+              } 
     generators = {'hmac_secret_key_b64_cipher': {'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
 
-    if sys_type == 'fc1':
-        vals = vals + ('fws_url',)
-        prompts['fws_url'] = 'Enter the URL of your Farm Web Services server.\n'
+    #- if sys_type == 'fc1':
+    #-     vals = vals + ('fws_url',)
+    #-    prompts['fws_url'] = 'Enter the URL of your Farm Web Services server.\n'
         
     return prompt(vals, prompts, generators)
 
@@ -85,18 +87,19 @@ def create_system():
         return 'CANCELLED'
 
     if cmd.lower() == 'fc1':
-        template_file = 'config_fc1.j2' 
+        template_file = '/templates/config_fc1.j2' 
     elif cmd.lower() == 'fc2':
         template_file = 'config_fc2.j2' 
     elif cmd.lower() == 'mvp':
         template_file = 'config_mvp.j2' 
     elif cmd.lower() == 'custom':
-        template_file = 'config_custom.j2'
+        template_file = '/templates/config_custom.j2'
     elif cmd.lower() == 'download':
         print('The download function is not availble in this version of the fopd client.')
         return 'CANCELLED'
     else:
         print('ERROR - unknown hardware type')
+
 
     config = {'identity':get_identity(cmd.lower()),
               'jwt':get_jwt_info(cmd.lower()), 
@@ -127,8 +130,8 @@ def create_system():
     with open(cfp, 'w') as f:
         f.write(template.render(config=config))
 
-    print('Your configuration file has been written to {} replacing any existing file.'.format(cfp))
-    print('You can edit the configuration file by hand to change any settings.  Be sure to restart\n'+\
+    print('Your configuration file has been written to {} replacing any existing file.\n'.format(cfp),
+          'You can edit the configuration file by hand to change any settings.  Be sure to restart\n',
           'the fopd system after you save your edits.')
     
     return 'OK'

@@ -2,6 +2,8 @@ from time import time
 
 class LogFileEntryTable(object):
 
+    #TODO Need to figure out a way to keep the log_entries table from over flowing.
+
     def __init__(self, interval):
         self.interval = interval
        

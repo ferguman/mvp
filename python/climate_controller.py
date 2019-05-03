@@ -32,9 +32,10 @@ def load_recipe_file(rel_path):
 
     global climate_state
 
-    climate_state['recipe'] = None
+    #- climate_state['recipe'] = None
 
-    recipe_path = getcwd() + rel_path
+    #- recipe_path = getcwd() + rel_path
+    recipe_path = path.join(getcwd() + rel_path) 
     logger.info('loading recipe file: {}'.format(recipe_path))
 
     if path.isfile(recipe_path):
@@ -43,10 +44,16 @@ def load_recipe_file(rel_path):
         with open(recipe_path) as f:
             try:
                 climate_state['recipe'] = load(f)
+                return (True, 'OK')
             except:
-                logger.error('cannot parse recipe file {}, {}, {}.'.format(recipe_path, exc_info()[0], exc_info()[1]))
+                msg = 'cannot load and parse recipe file {}, {}, {}.'.format(recipe_path, exc_info()[0], exc_info()[1])
+                logger.error(msg)
     else:
-        logger.error('no recipe file found. the climate controller cannot run without a recipe file.')
+        msg = 'No recipe file found at {}. The climate controller cannot run without a recipe file.'.format(recipe_path)
+        logger.error(msg)
+        
+    return (False, msg)
+    
 
 def load_state_file(rel_path):
 
@@ -74,7 +81,7 @@ def write_state_file(rel_path, update_interval: 'secs', force: bool):
     if force or (time() >= climate_state['last_state_file_update_time'] + update_interval):
 
         # Go ahead and log the update time even though the file write is not done. This way
-        # you want bang on the file system over and over in the presence of errors.
+        # you won't bang on the file system over and over in the presence of errors.
         climate_state['last_state_file_update_time'] = time()
        
         try:
@@ -99,7 +106,7 @@ def make_help(prefix):
         s = s + nul_pre + '                             supplied then start on day 0.\n'
         s = s + nul_pre + "                             e.g. {}.cmd('start', day_index=2) to start a recipe at 3rd day.\n".format(prefix)
         s = s + cmd_pre + "cmd('load_recipe'|'lr',\n" 
-        s = s + nul_pre + '    recipe_file=path)      - Load a recipe file. If no recipe_file argument is given\n'
+        s = s + nul_pre + '    recipe_path=path)      - Load a recipe file. If no recipe_file argument is given\n'
         s = s + nul_pre + '                             then load the default recipe file as specified in the configuration file.\n'
         s = s + nul_pre + "                           - e.g. {}.cmd('lr', recipe_path='/climate_recipes/test1.rcp')\n".format(prefix)
         s = s + cmd_pre + "cmd('stop')                - stop the current recipe.\n"
@@ -213,16 +220,17 @@ def make_cmd(config_args):
                     return 'OK'
                 elif args[0] == 'load_recipe' or args[0] == 'lr':
 
-                    if not 'recipe_file' in kwargs:
+                    if not 'recipe_path' in kwargs:
                         # TBD - Need to 1st check to make sure the file exists and then warn user if it does not exist.
-                        load_recipe_file(config_args['default_recipe_file'])
+                        res = load_recipe_file(config_args['default_recipe_file'])
                     else:
-                        load_recipe_file(kwargs['recipe_file'])
+                        res = load_recipe_file(kwargs['recipe_path'])
 
                     # write the climate state to disk
                     write_state_file(config_args['state_file'], 0, True)
                     
-                    return 'OK'
+                    #- return 'OK'
+                    return res[1] 
                 else:
                     return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
             else:
@@ -245,13 +253,17 @@ def init_state(args):
     climate_state['run_mode'] = 'off'
     climate_state['cur_phase_index'] = None
     climate_state['recipe_start_time'] = None
-    # make sure the state has a recipe in case there is no state file.
-    load_recipe_file(args['default_recipe_file'])
+    #- make sure the state has a recipe in case there is no state file.
+    #- load_recipe_file(args['default_recipe_file'])
 
     # See if there is previous state in a state file  and load it if you have it, otherwise
     # create a state file so it's there the next time we reboot.
     load_state_file(args['state_file'])
     climate_state['last_state_file_update_time'] = time()
+
+    # make sure the state has a recipe in case there is no state file.
+    if 'recipe' not in climate_state or not climate_state['recipe']:
+        load_recipe_file(args['default_recipe_file'])
 
     now = datetime.datetime.now()
     climate_state['cur_min'] = now.minute
@@ -364,7 +376,8 @@ def get_current_recipe_step_values(step_name, value_names):
 
         else:
             if climate_state['log_cycle']:
-                logger.warning('There are no recipe steps for: {}.  Why?'.format(step_name))
+                log_entry_table.add_log_entry(logger.error, 
+                    'There are no recipe steps for: {}.  Why?'.format(step_name)) 
 
     except:
         log_entry_table.add_log_entry(logger.error, 
@@ -402,7 +415,7 @@ def check_lights(controller):
             controller['cmd']('off', 'grow_light')
 
 
-def run_interval_loop(controller, loop_name, curr_on_state, last_on_time):
+def run_interval_loop(loop_name, curr_on_state, last_on_time):
 
     global climate_state
 
@@ -428,35 +441,96 @@ def run_interval_loop(controller, loop_name, curr_on_state, last_on_time):
         turn_on = False
 
     if turn_on == None:
-        logger.error('{} controller/recipe error. No action could be determined.'.format(loop_name))
+        logger.error('{} recipe error. No action could be determined.'.format(loop_name))
 
     return turn_on
 
-def run_flood_loop(controller):
+flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None}
 
-    on = run_interval_loop(controller, 'flood', climate_state['flood_on'], 
-                           climate_state['flood_last_on_time']) 
+def run_flood_loop(controllers, args):
+#- def run_flood_loop(controller, args):
+
+    global flood_sequence_state
+
+    log_entry_table.add_log_entry(logger.info, 'run_flood_loop called') 
+
+    on = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
 
     # Turn flood on/off if necessary
     if on and not climate_state['flood_on']:
         logger.info('turning flood on')
         climate_state['flood_on'] = True
         climate_state['flood_last_on_time'] = climate_state['cur_time']
-        controller['cmd']('on', 'water_circ_pump')
+
+        # Trigger the sequencer to run
+        flood_sequence_state['cmd_index'] = 0
+        
+        #- controller['cmd']('on', 'water_circ_pump')
 
     if not on and climate_state['flood_on']:
+        # Note: This controller supports multiple flood trays so it doesn't 
+        #       necessarily stop flooding
+        #       when the recipe interval duration has elapsed.  
+        #       Rather the sequence logic below determines when the flooding is
+        #       over.
         logger.info('turning flood off')
         climate_state['flood_on'] = False
         climate_state['flood_last_off_time'] = climate_state['cur_time']
-        controller['cmd']('off', 'water_circ_pump')
-    
-    
+
+        #- controller['cmd']('off', 'water_circ_pump')
+
+    # Note: flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None}
+   
+    # The presence of a not None index triggers the sequencer to iterate 
+    if flood_sequence_state['cmd_index'] or flood_sequence_state['cmd_index'] == 0 :
+        # Run the sequence logic
+        cmd = args['sequence'][flood_sequence_state['cmd_index']]
+
+        # The presence of a not None start time indicates a command is curretly waiting to time out.
+        if flood_sequence_state['cmd_start_time']:
+            if (climate_state['cur_time'] - flood_sequence_state['cmd_start_time']) >= flood_sequence_state['cmd_duration']:
+                # The command has timed out
+                logger.info('sequence command duration has elapsed, command index: {}, command type: {}'.format(flood_sequence_state['cmd_index'],cmd['cmd']))
+                if flood_sequence_state['cmd_index'] >= len(args['sequence']) - 1:
+                    #at end of command sequence
+                    flood_sequence_state['cmd_index'] = None
+                    flood_sequence_state['cmd_start_time'] = None
+                    flood_sequence_state['cmd_duration'] = None
+                    # No more commands in the sequence so return
+                    return
+                else:
+                    flood_sequence_state['cmd_index'] = flood_sequence_state['cmd_index'] + 1
+                    flood_sequence_state['cmd_start_time'] = None
+                    flood_sequence_state['cmd_duration'] = None
+                    # Move on and start the next command
+            else:
+                # waiting for the current command to time out so do nothing.
+                return
+        else:
+            # Indicates the start of a sequence
+            logger.info('starting a command sequence')
+
+        # is it a hardware actuation?
+        if cmd['cmd'] == 'hw_cmd':
+            logger.info('issuing hardware command {} {}'.format(cmd['hw_id'], cmd['hw_cmd']))
+            controllers[cmd['hw_int_index']]['cmd'](cmd['hw_cmd'], cmd['hw_id'])
+            flood_sequence_state['cmd_start_time'] = climate_state['cur_time']
+            flood_sequence_state['cmd_duration'] = cmd['duration']
+            #- controller['cmd']('off', 'water_circ_pump')
+        else:
+            # unknown command - abort the sequence
+            log_entry_table.add_log_entry(logger.error, 'uknown sequence command: {}'.format(cmd['cmd'])) 
+            # Reset the state so that the sequence won't start again till the climate recipe fires it.
+            flood_sequence_state['cmd_index'] = None
+            flood_sequence_state['cmd_start_time'] = None
+            flood_sequence_state['cmd_duration'] = None
+   
+
 def run_air_flush_loop(controller):
 
     global climate_state
 
-    flush_on = run_interval_loop(controller, 'air_flush', climate_state['air_flush_on'], 
-                                 climate_state['air_flush_last_on_time']) 
+    flush_on = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
 
     # Turn flush on/off if necessary
     if flush_on and not climate_state['air_flush_on']:
@@ -470,48 +544,6 @@ def run_air_flush_loop(controller):
         climate_state['air_flush_last_off_time'] = climate_state['cur_time']
 
     return flush_on
-
-    """-
-    global climate_state
-
-    values = get_current_recipe_step_values('air_flush', ('interval', 'duration'))
-    flush_on = None
-
-    if values != None and climate_state['air_flush_last_on_time'] != None:
-        if climate_state['air_flush_on'] and\
-           climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['duration']:
-
-            flush_on = False
-        elif not climate_state['air_flush_on'] and\
-               climate_state['cur_time'] - climate_state['air_flush_last_on_time'] > 60 * values['interval']:
-            flush_on = True
-        else:
-            # Waiting for next transition to on or off so leave the fan in it's current state.
-            flush_on = climate_state['air_flush_on']
-    elif values != None and climate_state['air_flush_last_on_time'] == None:
-        # Assume this is a startup state.  There are recipe values for the flush flan but 
-        # no history on the flushing so go ahead and start a flush cycle.
-        flush_on = True
-    else:
-        # There are no recipe values for flushing so leave the fan off.
-        flush_on = False
-
-    if flush_on == None:
-        logger.error('air flush controller logic error. No flush determination was made.')
-
-    # Turn flush on/off if necessary
-    if flush_on and not climate_state['air_flush_on']:
-        logger.info('turning air flush on')
-        climate_state['air_flush_on'] = True
-        climate_state['air_flush_last_on_time'] = climate_state['cur_time']
-
-    if not flush_on and climate_state['air_flush_on']:
-        logger.info('turning air flush off')
-        climate_state['air_flush_on'] = False
-        climate_state['air_flush_last_off_time'] = climate_state['cur_time']
-
-    return flush_on
-    """
 
 
 def check_circ_fan(controller):
@@ -714,7 +746,7 @@ def log_if_log_cycle(level, msg):
     if climate_state['log_cycle']:
         logger.log(level, msg)
 
-def update_climate_state(min_log_period, controller):
+def update_climate_state(min_log_period, control_loops):
 
     global climate_state
     
@@ -738,19 +770,47 @@ def update_climate_state(min_log_period, controller):
     else:
         climate_state['log_cycle'] = False
 
-    #- at = controller['get']('air_temp')['value']
-    at = controller['get']('air_temp')
-    try:
-        climate_state['cur_air_temp']['value'] = float(at)
-    except:
-        log_entry_table.add_log_entry(logger.warning, 
-            'cannot read air temperature. value returned by source is {}'.format(at))
-        #- log_if_log_cycle(WARNING,'cannot read air temperature. value returned by source is {}'.format(at)) 
-        #- if climate_state['log_cycle']:
-        #-    logger.warning('cannot read air temperature. value returned by source is {}'.format(at))
+    # Take an air temperature reading but only if one of the control functions needs the temperature.
+    for c in control_loops:
+        if c['need'] == 'air_temp' and c['enabled']:
+            at = controller['get']('air_temp')
+            try:
+                climate_state['cur_air_temp'] = float(at['value'])
+                break
+            except:
+                log_entry_table.add_log_entry(logger.warning, 
+                    'cannot read air temperature. value returned by source is {} {} {}'.format(at, exc_info()[0], exc_info()[1]))
 
-    # logger.info('cur_time {}, last_log_time: {}, log_cycle: {}'.format(climate_state['cur_time'], 
-    #             climate_state['last_log_time'], climate_state['log_cycle']))
+
+def create_control_loops(control_configs, app_state):
+
+    controls = []
+    
+    for c in control_configs:
+
+        if c['function'] == 'drain_and_flood':
+            controls.append({'func':run_flood_loop, 'enabled':c['enabled'], 
+                             'need':None, 'args':[[app_state[s] for s in c['hardware_interfaces']], c['args']]
+                           })
+
+        if c['function'] == 'circulation_fan':
+            controls.append({'func':check_circ_fan, 'enabled':c['enabled'],
+                             'need':None, 'args':[app_state[c['hardware_interface']]]})
+
+        if c['function'] == 'grow_lights':
+            controls.append({'func':check_lights, 'enabled':c['enabled'],
+                             'need':None, 'args':[app_state[c['hardware_interface']]]})
+
+        if c['function'] == 'air_heating':
+            controls.append({'func':run_heating_loop, 'enabled':c['enabled'], 
+                             'need':('air_temp',), 'args':[app_state[c['hardware_interface']], c['hysteresis']]})
+
+        if c['function'] == 'air_cooling':
+            controls.append({'func':run_air_flush_and_cooling_loop, 'enabled':c['enabled'], 
+                             'need':('air_temp',), 'args':[app_state[c['hardware_interface']], c['hysteresis']]})
+
+    return controls
+
 
 def start(app_state, args, barrier):
 
@@ -772,20 +832,10 @@ def start(app_state, args, barrier):
     # Don't proceed until all the other resources are available.
     barrier.wait()    
 
-    ''' TODO - add a compiler to create the control loops
-    # Compile recipe to create a control loop
-    control_loop =  compile_recipe(): 
-    if not control_loop:
-        app_state['stop'] = True
-    '''
-
-    #- For now instead of compiling create the control loops by hand.
-    control_loops = [
-        {'func': run_flood_loop, 'args':[app_state[args['hardware_interface']]]}
-    ]
-
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
+
+    control_loops = create_control_loops(args['controls'], app_state) 
 
     while not app_state['stop']:
 
@@ -794,32 +844,15 @@ def start(app_state, args, barrier):
        try:
            if climate_state['run_mode'] == 'on': 
 
-               update_climate_state(args['min_log_period'], hw_int)
+               update_climate_state(args['min_log_period'], control_loops)
               
                for loop in control_loops:
-                   loop['func'](*loop['args'])
-
-               #- has_circ_fan_control is known by the hardware module - move it there.
-               #- if args['has_circ_fan_control']:
-               #- check_circ_fan(hw_int)
-
-               #- check_lights(hw_int)
-
-               #- has_air_heater_control is known by the hardware module (e.g. 
-               #- openag_micro_fc2). Move it there.
-               #- if args['has_air_heater_control']:
-               #- run_heating_loop(hw_int, args['hysteresis'])
-
-               # The vent is used for air cooling as well as for air flushes. 
-               # If either the cooler or the air flusher wants the vent fan on then
-               # turn it on.
-               #- run_air_flush_and_cooling_loop(hw_int, args['hysteresis'])
-
-               # The flood loop is used for flood and drain systems.
-               #- run_flood_loop(hw_int)
+                   if loop['enabled']:
+                       loop['func'](*loop['args'])
 
            # Every once in a while write the state to the state file to make sure the file 
-           # stays up to date.  TBD: A more sophisticated system would write only when
+           # stays up to date.  
+           # TODO: A more sophisticated system would write only when
            # changes were made.
            #
            write_state_file(args['state_file'], args['state_file_write_interval'], False)

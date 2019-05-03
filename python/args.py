@@ -8,6 +8,6 @@ def get_args():
                         + ' use this mode when running as a systemd service', \
                         action='store_true')
     parser.add_argument('-u', '--utility', type=str, 
-                        choices=['create_private_key', 'create_system'],
+                        choices=['create_private_key', 'create_system', 'create_service_file'],
                         help='perform a utility function.')
     return parser.parse_args()

@@ -17,16 +17,18 @@ logger = get_sub_logger(__name__)
 
 cmd_lock = Lock()
 
+"""-
 def get_passphrase():
 
     return getpass("Enter your passphrase: ")
+"""
 
 def help():
     
     return """\
     sys.help() -   displays this page.
-    sys.exit() -   stop the mvp program.
-    sys.dir() -    show all available resources
+    sys.exit() -   stop the fopd program.
+    sys.dir() -    show all available resources.
     sys.cmd(cmd) - run a command. Note: that if a command calls this command then the system will lock
                    forever waiting for the first call to finish.  This command is not reentrant. Also
                    if you call this command from the command prompt then the sytem will lock forever. This

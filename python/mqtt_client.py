@@ -12,7 +12,7 @@ import paho.mqtt.client as mqtt
 
 from python.logger import get_sub_logger 
 from python.encryption.nacl_fop import decrypt
-from python.repl import get_passphrase
+#- from python.repl import get_passphrase
 from python.send_mqtt_data import publish_sensor_reading, publish_cmd_response #- send_sensor_data_via_mqtt_v2
 
 #- logger = getLogger('mvp' + '.' + __name__)

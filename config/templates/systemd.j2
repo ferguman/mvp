@@ -1,0 +1,13 @@
+[Unit]
+Description=fopd
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory={{config['working_directory']}}
+User={{config['user']}}
+ExecStart={{config['exec_start_cmd']}} {{config['exec_start_target']}} {{config['exec_start_args']}} 
+Restart={{config['restart_value']}}
+
+[Install]
+WantedBy=multi-user.target
