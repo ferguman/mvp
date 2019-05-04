@@ -2,7 +2,7 @@
 
 This code based originated as a fork of the [MVP II](https://github.com/webbhm/OpenAg-MVP-II).
 
-Many thanks to the team that created the MVP II code and hardware designs with a shout out to the folks that answered the call in2016 and 2017 at the St Louis Tech Shop (since reborn as MADE St. Louis). They were fund times!
+Many thanks to the team that created the MVP II code and hardware designs with a shout out to the folks that answered the call in 2016 and 2017 at the St Louis Tech Shop (since reborn as MADE St. Louis). They were fun times!
 
 ## Background 
 
