@@ -443,94 +443,120 @@ def run_interval_loop(loop_name, curr_on_state, last_on_time):
     if turn_on == None:
         logger.error('{} recipe error. No action could be determined.'.format(loop_name))
 
-    return turn_on
+    return {'turn_on':turn_on, 'interval':values['interval'], 'duration':values['duration']}
 
-flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None}
+flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None, 'recipe_duration':None}
+
+def reset_flood_sequence_state(cmd_index=None, clear_recipe_duration=True):
+
+    global flood_sequence_state
+
+    flood_sequence_state['cmd_index'] = cmd_index 
+    flood_sequence_state['cmd_start_time'] = None
+    flood_sequence_state['cmd_duration'] = None
+    if clear_recipe_duration:
+        flood_sequence_state['recipe_duration'] = None
 
 def run_flood_loop(controllers, args):
-#- def run_flood_loop(controller, args):
 
     global flood_sequence_state
 
     log_entry_table.add_log_entry(logger.info, 'run_flood_loop called') 
 
-    on = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
+    recipe_interval = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
+    on = recipe_interval['turn_on'] 
+    #- on = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
 
     # Turn flood on/off if necessary
     if on and not climate_state['flood_on']:
-        logger.info('turning flood on')
+        logger.info('turning climate recipe flood on')
         climate_state['flood_on'] = True
         climate_state['flood_last_on_time'] = climate_state['cur_time']
 
         # Trigger the sequencer to run
         flood_sequence_state['cmd_index'] = 0
+        flood_sequence_state['recipe_duration'] = recipe_interval['duration']
         
-        #- controller['cmd']('on', 'water_circ_pump')
-
     if not on and climate_state['flood_on']:
         # Note: This controller supports multiple flood trays so it doesn't 
         #       necessarily stop flooding
         #       when the recipe interval duration has elapsed.  
         #       Rather the sequence logic below determines when the flooding is
         #       over.
-        logger.info('turning flood off')
+        logger.info('turning climate recipe flood off - Note that sequence may continue on for multiple tray floods')
         climate_state['flood_on'] = False
         climate_state['flood_last_off_time'] = climate_state['cur_time']
-
-        #- controller['cmd']('off', 'water_circ_pump')
 
     # Note: flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None}
    
     # The presence of a not None index triggers the sequencer to iterate 
     if flood_sequence_state['cmd_index'] or flood_sequence_state['cmd_index'] == 0 :
         # Run the sequence logic
-        cmd = args['sequence'][flood_sequence_state['cmd_index']]
 
         # The presence of a not None start time indicates a command is curretly waiting to time out.
+        # Check for command timeout.
         if flood_sequence_state['cmd_start_time']:
             if (climate_state['cur_time'] - flood_sequence_state['cmd_start_time']) >= flood_sequence_state['cmd_duration']:
                 # The command has timed out
-                logger.info('sequence command duration has elapsed, command index: {}, command type: {}'.format(flood_sequence_state['cmd_index'],cmd['cmd']))
+                logger.info('sequence command duration has elapsed, command index: {}, command type: {}'.format(
+                    flood_sequence_state['cmd_index'], args['sequence'][flood_sequence_state['cmd_index']]['cmd']))
                 if flood_sequence_state['cmd_index'] >= len(args['sequence']) - 1:
                     #at end of command sequence
-                    flood_sequence_state['cmd_index'] = None
-                    flood_sequence_state['cmd_start_time'] = None
-                    flood_sequence_state['cmd_duration'] = None
+                    reset_flood_sequence_state()
+                    logger.info('end of drain and flood sequence')
                     # No more commands in the sequence so return
                     return
                 else:
-                    flood_sequence_state['cmd_index'] = flood_sequence_state['cmd_index'] + 1
-                    flood_sequence_state['cmd_start_time'] = None
-                    flood_sequence_state['cmd_duration'] = None
+                    reset_flood_sequence_state(cmd_index = flood_sequence_state['cmd_index'] + 1, 
+                                               clear_recipe_duration=False)
                     # Move on and start the next command
             else:
                 # waiting for the current command to time out so do nothing.
                 return
         else:
             # Indicates the start of a sequence
-            logger.info('starting a command sequence')
+            logger.info('starting a drain and flood sequence')
+
+        # The command has not timed out so assume we are at the start of a command.
+        cmd = args['sequence'][flood_sequence_state['cmd_index']]
+        logger.info('starting sequence command: {}, command: {}'.format(
+            flood_sequence_state['cmd_index'], cmd))
+
+        # Set command start time and duration. All commands must have these two aspects.
+        flood_sequence_state['cmd_start_time'] = climate_state['cur_time']
+        if isinstance(cmd['duration'], (int, float)):
+           flood_sequence_state['cmd_duration'] = cmd['duration']
+        elif cmd['duration'] == 'recipe':
+           #Note that recipe durations are in minutes. Sequence durations are in seconds.
+           flood_sequence_state['cmd_duration'] = flood_sequence_state['recipe_duration'] * 60
+        else:
+            # unknown command duration  - abort the sequence
+            log_entry_table.add_log_entry(logger.error, 'unknown command duration: {}'.format(cmd['duration'])) 
+            # Reset the state so that the sequence won't start again till the climate recipe fires it.
+            reset_flood_sequence_state()
+            return
 
         # is it a hardware actuation?
         if cmd['cmd'] == 'hw_cmd':
             logger.info('issuing hardware command {} {}'.format(cmd['hw_id'], cmd['hw_cmd']))
             controllers[cmd['hw_int_index']]['cmd'](cmd['hw_cmd'], cmd['hw_id'])
-            flood_sequence_state['cmd_start_time'] = climate_state['cur_time']
-            flood_sequence_state['cmd_duration'] = cmd['duration']
-            #- controller['cmd']('off', 'water_circ_pump')
+        elif cmd['cmd'] == 'wait':
+            logger.info('waiting....')
+
         else:
             # unknown command - abort the sequence
-            log_entry_table.add_log_entry(logger.error, 'uknown sequence command: {}'.format(cmd['cmd'])) 
+            log_entry_table.add_log_entry(logger.error, 'unknown sequence command: {}'.format(cmd['cmd'])) 
             # Reset the state so that the sequence won't start again till the climate recipe fires it.
-            flood_sequence_state['cmd_index'] = None
-            flood_sequence_state['cmd_start_time'] = None
-            flood_sequence_state['cmd_duration'] = None
+            reset_flood_sequence_state()
    
 
 def run_air_flush_loop(controller):
 
     global climate_state
 
-    flush_on = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
+    recipe_interval = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
+    flush_on = recipe_interval['turn_on'] 
+    #- flush_on = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
 
     # Turn flush on/off if necessary
     if flush_on and not climate_state['air_flush_on']:
