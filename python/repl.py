@@ -17,12 +17,6 @@ logger = get_sub_logger(__name__)
 
 cmd_lock = Lock()
 
-"""-
-def get_passphrase():
-
-    return getpass("Enter your passphrase: ")
-"""
-
 def help():
     
     return """\

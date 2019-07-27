@@ -24,6 +24,12 @@
 # 
 
 # Make sure we are running a compatible version of python.
+
+# Add the path to the location of the configuration files.  
+from settings import configuration_directory_location
+from sys import path
+path.append(configuration_directory_location)
+
 from check_python_version import check_python_version
 check_python_version()
 

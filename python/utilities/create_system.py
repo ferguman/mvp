@@ -6,6 +6,8 @@ from jinja2 import Environment, FileSystemLoader
 from python.encryption.nacl_fop import encrypt
 from python.utilities.prompt import prompt
 
+from settings import configuration_directory_location
+
 def get_identity(sys_type: str) -> dict:
 
     # ask for the identity settings
@@ -79,7 +81,14 @@ def create_system():
           'fc2      -> for openag food computer version 2\n',
           'mvp      -> for futureag mvp food computer\n',
           'custom   -> if you wish to configure your system by hand.\n',
-          'exit     -> to exit this utility.')
+          'exit     -> to exit this utility.',
+          '\n\n',
+          'Note: If you have an existing configuration file then exit this utility and\n',
+          'copy your existing configuration file to:',
+          '{}config.py.\n'.format(configuration_directory_location),
+          'Once your configuraiton file is in place you can run the fopd system.')
+
+
 
     cmd = input('fopd: ')
 
@@ -108,8 +117,9 @@ def create_system():
              }
 
     # generate the config file
-    tp = path.join(getcwd(), 'config')
-    cfp = path.join(tp, 'config.py')
+    #- tp = path.join(getcwd(), 'config')
+    #- cfp = path.join(tp, 'config.py')
+    cfp = path.join(configuration_directory_location, 'config.py')
     if path.isfile(cfp):
         print('WARNING: A configuration file already exists: {}.\n'.format(cfp),
               'If you proceed this file will be deleted. Any configuration in this file will be lost.\n',

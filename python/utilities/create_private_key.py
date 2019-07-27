@@ -3,13 +3,20 @@ from os import path, getcwd, mkdir
 from python.encryption.nacl_utils import create_random_key
 from python.utilities.prompt import prompt
 
+from settings import configuration_directory_location
+
 def create_private_key():
     """ Create a private key then put it in a private key file """
 
     print('This utility will ask you for your private key. It will give you the option of supplying')
     print('your own private key or having the system generate a random private key for you.')
     print('It will then create a binary file containing this private key.')
-    print('The file will be placed at config/private_key.\n')
+    #- print('The file will be placed at config/private_key.\n')
+    print('The file will be placed at {}private_key.\n'.format(configuration_directory_location))
+    print('Note that if you already have a private key file then exit this utility and copy the file')
+    print('to {}private_key.  Note that you will also need the configuration file that contains the data'.format(configuration_directory_location))
+    print('encrypted with this private key.')
+
     print('Enter yes to proceed, no to exit')
     
     cmd = input('fopd: ')
@@ -51,11 +58,10 @@ def create_private_key():
 
 def create_config_directory() -> 'path_to_config_file':
 
-    cp = path.join(getcwd(), 'config')
+    #- cp = path.join(getcwd(), 'config')
+    cp = path.join(configuration_directory_location)
     if not path.isdir(cp):
         print('Creating directory named config at {}'.format(cp))
         mkdir(cp)
 
     return cp
-
-
