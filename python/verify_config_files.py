@@ -12,7 +12,6 @@ def verify_config_file():
 
    try:
 
-      #- config_livefile_path = getcwd() + '/config/config.py'
       config_livefile_path = configuration_directory_location + 'config.py'
 
       if not path.isfile(config_livefile_path):

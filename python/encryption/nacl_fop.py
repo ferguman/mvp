@@ -4,6 +4,8 @@ from base64 import standard_b64encode, standard_b64decode
 
 from nacl import secret, utils
 
+from settings import configuration_directory_location
+
 #+ from config.private_key import nsk_b64
 
 def encrypt(plain_text: 'binary string') -> 'b64 string':
@@ -35,7 +37,8 @@ class SecretKeyException(Exception):
 
 class SecretKey:
     """ This Context makes the secret key available.  The location of the secret
-        key file is hard coded to config/private_key.  The context stores the
+        key file is assumed to be the configuration_direction_location specified in the
+        settings file.  The context stores the
         secret key in a bytearray.  When the context exits it overwrites the 
         contents of the bytearray with zero to prevent malware from snooping the
         passcode.  Note: I don't know what happens to the in memory file contents,
@@ -45,7 +48,8 @@ class SecretKey:
 
     def __enter__(self) -> 'bytearray':
 
-        with open('config/private_key', 'rb') as fp:
+        #- with open('config/private_key', 'rb') as fp:
+        with open(configuration_directory_location + 'private_key', 'rb') as fp:
 
             self.secret_key = bytearray(32)
             for i in range(0, 32):

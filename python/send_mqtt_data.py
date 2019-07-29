@@ -2,15 +2,15 @@
 # MQTT thread will call the functions in this module and that thread will be responsible for synchronizing all
 # MQTT requests from all the different threads.
 
-#- from sys import path
+from sys import path
 import datetime
 from python.logger import get_sub_logger 
-#- from logging import getLogger
+from logging import getLogger
 
-#- path.append('/opt/mvp/config')
-from config.config import organization_guid
+path.append('/opt/mvp/config')
+from config import organization_guid
 
-#- logger = getLogger('mvp.' + __name__)
+logger = getLogger('mvp.' + __name__)
 logger = get_sub_logger(__name__)
 
 def send_sensor_data_via_mqtt_v2(s, mqtt_client, organization_id):

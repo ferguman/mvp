@@ -104,7 +104,7 @@ def create_system():
     elif cmd.lower() == 'custom':
         template_file = '/templates/config_custom.j2'
     elif cmd.lower() == 'download':
-        print('The download function is not availble in this version of the fopd client.')
+        print('The download function is not available in this version of the fopd client.')
         return 'CANCELLED'
     else:
         print('ERROR - unknown hardware type')

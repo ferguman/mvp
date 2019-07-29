@@ -2,7 +2,6 @@ from logging import handlers, getLogger, Formatter, ERROR, INFO, DEBUG
 from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
 from os import getcwd
-#- from config.config import device_name
 
 # TBD:  Move the logging configuration to a dictionary stored in a configuration file.
 # On linux use tail -F (translates as tail --follow=name --retry) to follow the 

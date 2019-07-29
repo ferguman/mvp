@@ -7,7 +7,7 @@ from python.logger import get_sub_logger
 from sys import exc_info
 from time import sleep, time
 
-from config.config import max_air_temperature, fan_controller_temp_sensor 
+from config import max_air_temperature, fan_controller_temp_sensor 
 from python.logData import logData
 from python.thermostat import adjustThermostat
 

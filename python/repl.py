@@ -13,8 +13,6 @@ from python.logger import get_sub_logger
 
 logger = get_sub_logger(__name__)
 
-#- from config.config import device_name, system
-
 cmd_lock = Lock()
 
 def help():

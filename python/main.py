@@ -13,7 +13,7 @@ def execute_main(args):
     #       first time fopd.py is run on a new device there may not be a config
     #       file yet.  So make sure that execute_main is only called once in the program.
     #
-    from config.config import system, device_name
+    from config import system, device_name
 
     logger = get_top_level_logger(device_name)
 

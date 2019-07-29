@@ -4,8 +4,7 @@ from datetime import tzinfo, datetime
 import requests
 import json
 
-#- from config.config import log_data_to_local_couchdb, log_data_to_local_file
-from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 from python.encryption.nacl_fop import decrypt
 from python.logger import get_sub_logger 
 
@@ -45,7 +44,7 @@ def logDB(r, comment=''):
     headers = {'content-type': 'application/json'}
     
     """
-    f there is a network problem like a DNS failure, or refused connection the Requests library will
+    if there is a network problem like a DNS failure, or refused connection the Requests library will
     raise a ConnectionError exception.  With invalid HTTP responses, Requests will also raise an HTTPError 
     exception, but these are rare.  If a request times out, a Timeout exception will be raised.
     If and when a request exceeds the preconfigured number of maximum redirections, then a TooManyRedirects

@@ -7,7 +7,7 @@ from datetime import datetime
 
 from python.encryption.nacl_fop import decrypt
 
-from config.config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 
 enable_display_unit_error_msg = None 
 
