@@ -120,7 +120,6 @@ def extract_sensor_values(mc_response, vals):
         # status_code is a whole number that gives sensor specific satus or error info
         # status_msg is a human readable description of what the status code means.
         #
-        #- logger.error('Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
         log_entry_table.add_log_entry(
             logger.error, 'Error reading fopd microconroller sensors. Micro returned: {}'.format(mc_response))
 
