@@ -15,6 +15,8 @@ from python.logData import logDB
 from python.logger import get_sub_logger
 from python.LogFileEntryTable import LogFileEntryTable
 
+from settings import recipes_directory_location, state_directory_location
+
 # Provide a lock to control access to the climate controller state
 #
 state_lock = Lock()
@@ -32,10 +34,8 @@ def load_recipe_file(rel_path):
 
     global climate_state
 
-    #- climate_state['recipe'] = None
-
-    #- recipe_path = getcwd() + rel_path
-    recipe_path = path.join(getcwd() + rel_path) 
+    #- recipe_path = path.join(getcwd() + rel_path) 
+    recipe_path = path.join(recipes_directory_location, rel_path) 
     logger.info('loading recipe file: {}'.format(recipe_path))
 
     if path.isfile(recipe_path):
@@ -59,7 +59,8 @@ def load_state_file(rel_path):
 
     global climate_state
 
-    state_file_path = getcwd() + rel_path
+    #- state_file_path = getcwd() + rel_path
+    state_file_path = path.join(state_directory_location, rel_path)
     logger.debug('opening climate state file: {}'.format(state_file_path))
 
     if path.isfile(state_file_path):
@@ -85,7 +86,8 @@ def write_state_file(rel_path, update_interval: 'secs', force: bool):
         climate_state['last_state_file_update_time'] = time()
        
         try:
-            state_file_path = getcwd() + rel_path
+            #- state_file_path = getcwd() + rel_path
+            state_file_path = path.join(state_directory_location, rel_path)
             logger.info('writing climate state file {}'.format(state_file_path))
 
             with open(state_file_path, 'w') as outfile:
@@ -221,15 +223,16 @@ def make_cmd(config_args):
                 elif args[0] == 'load_recipe' or args[0] == 'lr':
 
                     if not 'recipe_path' in kwargs:
-                        # TBD - Need to 1st check to make sure the file exists and then warn user if it does not exist.
+                        # TODO - Need to 1st check to make sure the file exists and then warn user if it does not exist.
                         res = load_recipe_file(config_args['default_recipe_file'])
                     else:
-                        res = load_recipe_file(kwargs['recipe_path'])
+                        # Note that the recipe file will be looked for within the path specified by recipes_directory_location
+                        # which is specified in the settings file.
+                        res = load_recipe_file(path.join(kwargs['recipe_path']))
 
                     # write the climate state to disk
                     write_state_file(config_args['state_file'], 0, True)
                     
-                    #- return 'OK'
                     return res[1] 
                 else:
                     return "illegal command: {}. please specify 'start' or 'stop'".format(args[0])
@@ -253,8 +256,6 @@ def init_state(args):
     climate_state['run_mode'] = 'off'
     climate_state['cur_phase_index'] = None
     climate_state['recipe_start_time'] = None
-    #- make sure the state has a recipe in case there is no state file.
-    #- load_recipe_file(args['default_recipe_file'])
 
     # See if there is previous state in a state file  and load it if you have it, otherwise
     # create a state file so it's there the next time we reboot.
