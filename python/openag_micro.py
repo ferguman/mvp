@@ -65,9 +65,13 @@ def make_fc_cmd(mc_state):
     
     # if the system is in camera pose mode then override the light commands
     # in order to give good lighting for the camera.
-    if mc_state['camera_pose']:
-        cmds[target_indexes['grow_light']] = False 
-        cmds[target_indexes['chamber_lights']] = True
+    #- if mc_state['camera_pose']:
+    if mc_state['camera']['pose'] == True:
+        for pc in mc_state['camera']['camera_pose_cmds']:
+            cmds[target_indexes[pc['command']]] = pc['value'] 
+
+        #- cmds[target_indexes['grow_light']] = False 
+        #- cmds[target_indexes['chamber_lights']] = True
 
     # walk the command array and build the arduino command
     #
@@ -206,7 +210,8 @@ def make_cmd(mc_state, ser):
         elif cmd == 'camera_pose' or cmd == 'cp':
 
             if args[1] == 'on':
-                mc_state['camera_pose'] = True 
+                #- mc_state['camera_pose'] = True 
+                mc_state['camera']['pose'] = True 
 
                 # send a command to the arduino now so the lights go into pose mode ASAP
                 send_mc_cmd(ser, make_fc_cmd(mc_state))
@@ -214,7 +219,7 @@ def make_cmd(mc_state, ser):
                 logger.info('posing for a picture')
                 return 'OK'
             elif args[1] == 'off':
-                mc_state['camera_pose'] = None
+                mc_state['camera']['pose'] = None
                 logger.info('will stop posing for a picture')
                 return 'OK'
             else:
@@ -401,7 +406,8 @@ def start(app_state, args, b):
 
     # We have one state variable (i.e. camera_pose) so no need of a state structure
     mc_state = {}
-    mc_state['camera_pose'] = None
+    #- mc_state['camera_pose'] = None
+    mc_state['camera'] = {'pose': None, 'camera_pose_cmds': args['camera_pose_cmds']} 
 
     # Initilize the actuators
     global target_indexes, cur_command
