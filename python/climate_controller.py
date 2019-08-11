@@ -15,7 +15,7 @@ from python.logData import logDB
 from python.logger import get_sub_logger
 from python.LogFileEntryTable import LogFileEntryTable
 
-from settings import recipes_directory_location, state_directory_location
+from data_location import recipes_directory_location, state_directory_location
 
 # Provide a lock to control access to the climate controller state
 #

@@ -1,11 +1,10 @@
-
 def prompt(vals:tuple, prompts:dict, generators:dict):
 
     result = {}
     
     for val in vals:
         print(prompts[val])
-        cmd = input('fopd: ')
+        cmd = input('\033[92m fopd:\033[00m ')
 
         if val in generators:
             # look for invocation of custom generators by user (e.g. they entered 'auto')

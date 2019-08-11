@@ -4,7 +4,7 @@ from sys import exc_info
 
 from python.logger import get_sub_logger 
 
-from settings import configuration_directory_location
+from data_location import configuration_directory_location
 
 logger = get_sub_logger(__name__)
 
