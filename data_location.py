@@ -10,3 +10,5 @@ fopd_data_directory = '/data/fopd/'
 configuration_directory_location = '/data/fopd/config/'
 recipes_directory_location = '/data/fopd/recipes/'
 state_directory_location = '/data/fopd/state/'
+
+log_directory = '/data/fopd/logs/'

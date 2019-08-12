@@ -3,6 +3,8 @@ from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
 from os import getcwd
 
+from data_location import log_directory
+
 # TBD:  Move the logging configuration to a dictionary stored in a configuration file.
 # On linux use tail -F (translates as tail --follow=name --retry) to follow the 
 # rotating log. tail -f stops following when the log gets rotated out from under it.
@@ -25,7 +27,8 @@ def get_top_level_logger(this_devices_name):
    logger = getLogger(device_name)
    logger.setLevel(INFO)
 
-   handler = RotatingFileHandler(getcwd() + '/logs/fopd.log', maxBytes=10*1000*1000,\
+   #- handler = RotatingFileHandler(getcwd() + '/logs/fopd.log', maxBytes=10*1000*1000,\
+   handler = RotatingFileHandler(getcwd() + path.join(log_directoy, 'fopd.log'), maxBytes=10*1000*1000,\
                                  backupCount=5)
 
    formatter = Formatter(fmt='%(asctime)s %(levelname)s %(name)s:%(message)s', 
