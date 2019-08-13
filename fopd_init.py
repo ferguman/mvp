@@ -10,7 +10,15 @@
 # files like hostname and hosts with files that exists on /data/etc.  This would allow
 # changes to wifi, hostname, pi password, etc to remain in place on the Mender client
 # after updates had been installed.:q
-
+#
+# The following command will mount /data/etc as the upper directory overlaying /etc:
+#
+# sudo mount -t overlay -o lowerdir=/etc,upperdir=/data/etc,workdir=/data/work overlay /etc
+#
+# You will want to run the above command as part of hte boot process. See https://yagrebu.net/unix/rpi-overlay.md
+# for how this is done in the case of a ramfs ovelay.  This application is not a ramfs overlay but there
+# should be some analgouse mechanism to mount over /etc before Linux starts looking into /etc.
+#
 
 # Usage: python3 mender_init.py
 
