@@ -3,6 +3,15 @@
 # it changes the hostname using the value found in this file. If there is no /data/fopd/hostname
 # file then the program prompts the user for a hostname and sets it. 
 
+# Look at using overlays (OverlayFS in Linux).
+# https://www.datalight.com/blog/2016/01/27/explaining-overlayfs-%E2%80%93-what-it-does-and-how-it-works/
+# https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt
+# The idea would be to create a directory (e.g. /etc/) that allows you to overlay
+# files like hostname and hosts with files that exists on /data/etc.  This would allow
+# changes to wifi, hostname, pi password, etc to remain in place on the Mender client
+# after updates had been installed.:q
+
+
 # Usage: python3 mender_init.py
 
 # TODO: Add a password change for the pi linux account.
