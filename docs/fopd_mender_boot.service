@@ -9,7 +9,7 @@ Wants=network-pre.target
 [Service]
 Type=oneshot
 WorkingDirectory=/home/pi/fopd
-User=pi
+User=root
 ExecStart=/home/pi/fopd/fopd/bin/python /home/pi/fopd/fopd_mender_boot.py  
 RemainAfterExit=yes
 

@@ -12,16 +12,19 @@
 
 import subprocess
 
+# TODO Add logging.
+#+ from python.logger import get_top_level_logger
+
 def copy_file(source_path, destination_path):
-   cp = subprocess.run('cp -f {} {}'.format(source_path, destination_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-   """
-   if cp.returncode != 0:
-      print('ERROR: Can not copy {} to {}'.format(source_path, destination_path))
-      print('{}'.format(cp.stderr))
-   """
+
+       cp = subprocess.run('cp -f {} {}'.format(source_path, destination_path), stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+       """
+       if cp.returncode != 0:
+          print('ERROR: Can not copy {} to {}'.format(source_path, destination_path))
+          print('{}'.format(cp.stderr))
+       """
 
 copy_file('/data/etc/hostname', '/etc/hostname')
 copy_file('/data/etc/hosts', '/etc/hosts')
-
 
 cp = subprocess.run('/bin/hostname -f /etc/hostname', stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
