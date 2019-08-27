@@ -1,5 +1,6 @@
 from datetime import datetime
-from subprocess import check_call, CalledProcessError
+#- from subprocess import check_call, CalledProcessError
+from subprocess import CalledProcessError
 from sys import path
 from time import sleep, time
 
