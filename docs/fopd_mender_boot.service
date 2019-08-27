@@ -1,0 +1,17 @@
+[Unit]
+Description=fopd mender boot script
+DefaultDependencies=no
+Requires=local-fs.target
+After=local-fs.target
+Before=network-pre.target
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/pi/fopd
+User=pi
+ExecStart=/home/pi/fopd/fopd/bin/python /home/pi/fopd/fopd_mender_boot.py  
+RemainAfterExit=yes
+
+[Install]
+WantedBy=network.target
