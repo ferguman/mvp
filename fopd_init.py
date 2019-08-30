@@ -20,7 +20,7 @@
 # should be some analgouse mechanism to mount over /etc before Linux starts looking into /etc.
 #
 
-# Usage: python3 mender_init.py
+# Usage: python3 fopd_init.py
 
 # TODO: Add a password change for the pi linux account.
 
@@ -89,26 +89,6 @@ def fopd_init():
             # Create private key file
             create_private_key() 
 
-            """ - Take out the git stuff it only benefits developers and it isn't implemented securely enough 
-                as it currently stands
-            # ask for git config info
-            print('To setup your git username and email address enter {}. Enter {} to skip this step.'.format(
-                  red('yes'), red('skip')))
-            print('Enter to exit.'.format(red('exit')))
-            cmd = input("\033[92m {} \033[00m" .format('fopd:')) 
-
-            if cmd.lower() != 'yes' and cmd.lower() != 'skip':
-                return 'Mender Init Cancelled'
-            elif cmd.lower() == 'yes':
-                git_user_name = input("\033[92m {} \033[00m" .format('Enter your git user name: ')) 
-                git_user_email = input("\033[92m {} \033[00m" .format('Enter your git email address: ')) 
-
-                result = subprocess.run(['sudo', './scripts/git_config.sh', 
-                                         git_user_email, git_user_name, '/data/fopd/'])
-            """
-
-            
-                
             return 'Ok'
 
     else:
