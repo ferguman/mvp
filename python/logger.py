@@ -1,7 +1,7 @@
 from logging import handlers, getLogger, Formatter, ERROR, INFO, DEBUG
 from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
-from os import getcwd
+from os import getcwd, path
 
 from data_location import log_directory
 
@@ -27,8 +27,7 @@ def get_top_level_logger(this_devices_name):
    logger = getLogger(device_name)
    logger.setLevel(INFO)
 
-   #- handler = RotatingFileHandler(getcwd() + '/logs/fopd.log', maxBytes=10*1000*1000,\
-   handler = RotatingFileHandler(getcwd() + path.join(log_directoy, 'fopd.log'), maxBytes=10*1000*1000,\
+   handler = RotatingFileHandler(path.join(log_directory, 'fopd.log'), maxBytes=10*1000*1000,\
                                  backupCount=5)
 
    formatter = Formatter(fmt='%(asctime)s %(levelname)s %(name)s:%(message)s', 
