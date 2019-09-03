@@ -2,7 +2,7 @@
 # MQTT thread will call the functions in this module and that thread will be responsible for synchronizing all
 # MQTT requests from all the different threads.
 
-from sys import path
+from sys import path, exc_info
 import datetime
 from python.logger import get_sub_logger 
 from logging import getLogger
@@ -32,14 +32,22 @@ def send_sensor_data_via_mqtt_v2(s, mqtt_client, organization_id):
 
 def make_sensor_reading_payload(sr):
 
-    return  '{"sensor":"'             + sr['device_name'] + '", '\
-            '"device_id":"'           + sr['device_id'] + '", '\
-            '"subject":"'             + sr['subject'] + '", '\
-            '"subject_location_id":"' + sr['subject_location_id'] + '", '\
-            '"attribute":"'           + sr['attribute'] + '", '\
-            '"value":"'               + sr['value'] + '", '\
-            '"units":"'               + sr['units'] + '", '\
-            '"time":"'                + datetime.datetime.utcfromtimestamp(sr['ts']).isoformat() + '"}'
+    try:
+        units = 'None'
+        if sr['units']:
+            units = sr['units']
+
+        return  '{"sensor":"'             + sr['device_name'] + '", '\
+                '"device_id":"'           + sr['device_id'] + '", '\
+                '"subject":"'             + sr['subject'] + '", '\
+                '"subject_location_id":"' + sr['subject_location_id'] + '", '\
+                '"attribute":"'           + sr['attribute'] + '", '\
+                '"value":"'               + sr['value'] + '", '\
+                '"units":"'               + units + '", '\
+                '"time":"'                + datetime.datetime.utcfromtimestamp(sr['ts']).isoformat() + '"}'
+    except:
+        logger.error('exception occurred creating mqtt topic for sensor reading: {}, error: {}{}'.format(\
+                      sr, exc_info()[0], exc_info()[1]))
 
 def publish_mqtt_topic(mqtt_client, topic, payload_value):
 

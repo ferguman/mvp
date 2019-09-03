@@ -1,4 +1,4 @@
-from os import getcwd
+from os import getcwd, path
 from python.camera_subscribers.CameraSubscriber import CameraSubscriber
 from shutil import copyfile
 from sys import exc_info
@@ -10,7 +10,8 @@ class LocalWebServer(CameraSubscriber):
     def new_picture(self, file_location):
 
        try:
-          current_image_copy_location = getcwd() + self.destination_dir + 'image.jpg'
+          #- current_image_copy_location = getcwd() + self.destination_dir + 'image.jpg'
+          current_image_copy_location = path.join(self.destination_dir,  'image.jpg')
           CameraSubscriber.logger.info('updating local web site picture')
           CameraSubscriber.logger.debug('copying newest picture to web directory: source image'
                                       + ' path: {}, destination path: {}'.format(\

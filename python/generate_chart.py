@@ -1,4 +1,4 @@
-from os import getcwd
+from os import getcwd, path
 import pygal
 from sys import exc_info
 import requests
@@ -7,6 +7,7 @@ from datetime import datetime
 
 from python.encryption.nacl_fop import decrypt
 
+from data_location import web_directory_location
 from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 
 enable_display_unit_error_msg = None 
@@ -103,7 +104,10 @@ def generate_chart(couchdb_url, chart_info, logger):
             v_lst.reverse()
 
             line_chart.add(chart_info['data_stream_name'], v_lst)
-            line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
+            #- line_chart.render_to_file(getcwd() + '/web/static/' + chart_info['chart_file_name'])
+
+
+            line_chart.render_to_file(path.join(web_directory_location, chart_info['chart_file_name']))
 
         else:
             logger.error('No chart data available')
