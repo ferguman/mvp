@@ -87,7 +87,31 @@ div.tab button.active {
 
 <div id="Config" class="tabcontent">
   <h3>Config</h3>
-    <p>Show status of fopd device</p>
+    <p>Hotspot SSID: <input type="text" name="hotspot_ssid">
+    <input type="radio" name="hotspot_state" value="on"> On
+    <input type="radio" name="hotspot_state" value="off"> Off</br>
+    Hotspot Passphrase: <input type="password" name="hotspot_passphrase"></br>
+    Note: The hotspot switch must be set to "auto" in order to turn your hotspot off. When the switch is set to "on" then the hotspot will always be on.
+    </p>
+
+    <p>
+    Hostname: <input type="text" name="hostname"></br>
+    </p>
+
+    <p>
+    Wi-Fi SSID: <input type="text" name="wifi_ssid"></br>
+    Passphrase: <input type="text" name="wifi_passphrase"></br>
+    Enter your local network Wi-Fi information here if you wish the fopd to connect to your network. In order to access your fopd from your local network you must use one of Ethernet, fopd Hotspot, or local network Wi-Fi. In order to access the fopd cloud you must use one of Ethernet or network Wi-Fi.
+
+    <p>
+    Raspbian user name: pi</br>
+    Lock Pi account:<input type="checkbox" name="lock_pi_account" value="true">Disables password based access. SSH key based authentication will still work.</br> 
+    Password: <input type="password" name="password"></br>
+    Repeat Password: <input type="password" name="repeat_password"></br>
+    Your public SSH Key: <input type="textarea" name="public_ssh_key"> Set a key to enable SSH key based authentication.
+    </p>
+
+    <button>Update</button>
 </div>
 
 <div id="About" class="tabcontent">
