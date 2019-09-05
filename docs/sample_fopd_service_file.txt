@@ -1,0 +1,13 @@
+[Unit]
+Description=fopd
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+WorkingDirectory=/home/pi/fopd
+User=pi
+ExecStart=/home/pi/fopd/fopd/bin/python /home/pi/fopd/fopd.py --silent  
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
