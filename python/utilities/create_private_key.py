@@ -15,8 +15,8 @@ def create_private_key():
     print('It will then create a binary file containing this private key.')
     print('The file will be placed at {}private_key.\n'.format(configuration_directory_location))
     print('Note that if you already have a private key file then exit this utility and copy the file')
-    print('to {}private_key.  Note that you will also need the configuration file that contains the data'.format(configuration_directory_location))
-    print('encrypted with this private key.')
+    print('to {}private_key. Note that encrypted information stored in the configuration file is'.format(configuration_directory_location))
+    print('decrypted using this private key.\n')
 
     print('Enter {} to proceed, {} to to exit.'.format(red('yes'), red('exit')))
     
@@ -56,6 +56,10 @@ def create_private_key():
         f.write(key)
 
     return 'OK'
+
+def create_random_uuid():
+    """Create a random UUID and print it at the console"""
+    print(uuid4())
 
 def create_config_directory() -> 'path_to_config_file':
 

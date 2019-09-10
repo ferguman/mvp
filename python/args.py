@@ -8,6 +8,9 @@ def get_args():
                         + ' use this mode when running as a systemd service', \
                         action='store_true')
     parser.add_argument('-u', '--utility', type=str, 
-                        choices=['create_private_key', 'create_system', 'create_service_file'],
+                        choices=['create_private_key', 'create_random_uuid', 'create_system', 
+                                 'create_service_file', 'decrypt', 'encrypt'],
                         help='perform a utility function.')
+    parser.add_argument('-i', '--utility_input', type=str, 
+                        help='Input for encrypt and decrypt utilities')
     return parser.parse_args()
