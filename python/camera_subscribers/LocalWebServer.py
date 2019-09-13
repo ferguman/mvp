@@ -10,7 +10,6 @@ class LocalWebServer(CameraSubscriber):
     def new_picture(self, file_location):
 
        try:
-          #- current_image_copy_location = getcwd() + self.destination_dir + 'image.jpg'
           current_image_copy_location = path.join(self.destination_dir,  'image.jpg')
           CameraSubscriber.logger.info('updating local web site picture')
           CameraSubscriber.logger.debug('copying newest picture to web directory: source image'
@@ -18,6 +17,6 @@ class LocalWebServer(CameraSubscriber):
                                         file_location, current_image_copy_location))
           copyfile(file_location, current_image_copy_location)
        except:
-          CameraSubscriber.logger.error('Coudn not copy latest image file to the web directory.'
+          CameraSubscriber.logger.error('Could not copy latest image file to the web directory.'
                                       + ' Check fswebcam for proper operations: {}, {}'.format(\
                                           exc_info()[0], exc_info()[1]))

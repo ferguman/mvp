@@ -7,7 +7,7 @@ from python.utilities.create_private_key import create_private_key
 from python.utilities.create_system import create_system
 from python.utilities.create_service_file import create_service_file
 
-logger = get_top_level_logger('fopd')
+#-logger = get_top_level_logger('fopd')
 
 def create_random_uuid():
     """Create a random UUID and print it at the console"""
@@ -23,6 +23,8 @@ def encrypt_util(pt):
     return 'OK'
 
 def execute_utility(args):
+
+    logger = get_top_level_logger('fopd')
 
     eval_state = {'stop':True, 'sys':{'cmd':None}}
     eval_state['utils'] = {'create_private_key':create_private_key}
