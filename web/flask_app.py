@@ -1,6 +1,7 @@
 from flask import Flask, render_template, __version__, make_response
 from python.logger import get_sub_logger 
 
+
 class fopdwFlask(Flask):
 
     jinja_options = Flask.jinja_options.copy()
@@ -40,7 +41,9 @@ def start(app_state, args, barrier):
             cl = app_state[args['chart_list_source']]['chart_list']
         else:
             cl = [] 
-        resp = make_response(render_template('home.html', chart_list=cl, num_of_charts=len(cl)))
+        #- resp = make_response(render_template('home.html', chart_list=cl, num_of_charts=len(cl)))
+        resp = make_response(render_template('home.html', 
+                                             chart_list=cl, num_of_charts=len(cl)))
 
         resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
         return resp

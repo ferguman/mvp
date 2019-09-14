@@ -14,7 +14,8 @@ class CameraSubscriber():
         self.regex = re.compile(kwargs.get('frequency'))
 
         self.posting_url = kwargs.get('url')
-        self.destination_dir = kwargs.get('destination_dir')
+
+        #- self.destination_dir = kwargs.get('destination_dir')
 
         self.take_picture_on_start = kwargs.get('take_picture_on_start')
 

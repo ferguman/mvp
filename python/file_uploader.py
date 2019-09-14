@@ -51,6 +51,9 @@ def get_file_hash(path_name):
     return standard_b64encode(m.digest()).decode('utf-8')
 
 def get_jws(path_name, camera_id):
+    """ create a jws token
+        hmac_secret_key_b64_cipher - A 64 byte random value shared between the JWT client and the JWT server.
+    """
 
     return jws.sign(claim_info(get_file_hash(path_name), extract_timestamp(path_name), camera_id), 
                     decrypt(hmac_secret_key_b64_cipher),

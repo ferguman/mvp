@@ -146,8 +146,6 @@ var app = new Vue({
 (% for chart in chart_list: %)
             this.((chart['vue_name'])) = "(( url_for('static', filename = chart['chart_file_name']) ))?" + new Date().getTime();
 (% endfor %)
-        /* TODO: Need to retrieve files from the correct place (e.g. on mender systems it will be /data/fopd/... */
-        /* see https://stackoverflow.com/questions/26971491/how-do-i-link-to-images-not-in-static-folder-in-flask */
 	},
 	update_status: function(event) {
 	    

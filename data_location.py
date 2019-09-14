@@ -10,7 +10,8 @@ fopd_data_directory = '/data/fopd/'
 configuration_directory_location = '/data/fopd/config/'
 recipes_directory_location = '/data/fopd/recipes/'
 state_directory_location = '/data/fopd/state/'
-local_web_chart_location = '/data/fopd/web/charts/'
+local_web_chart_directory = 'web/static/'
+local_web_image_directory = 'web/static/'
 camera_image_directory = '/data/fopd/pictures/'
 
 
