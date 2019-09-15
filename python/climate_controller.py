@@ -18,6 +18,7 @@ from python.LogFileEntryTable import LogFileEntryTable
 from data_location import recipes_directory_location, state_directory_location
 
 # Provide a lock to control access to the climate controller state
+
 #
 state_lock = Lock()
 
@@ -51,7 +52,8 @@ def load_recipe_file(rel_path):
     else:
         msg = 'No recipe file found at {}. The climate controller cannot run without a recipe file.'.format(recipe_path)
         logger.error(msg)
-        
+       
+    climate_state['recipe'] = None
     return (False, msg)
     
 
@@ -193,7 +195,7 @@ def show_state():
 
     except:
         logger.error('show_state command {}{}'.format(exc_info()[0], exc_info()[1]))
-        return "Error - can't show stat"
+        return "Error - can't show state"
 
 def make_cmd(config_args):
 
@@ -856,13 +858,18 @@ def start(app_state, args, barrier):
     # Load current state and recipe
     init_state(args)
 
+    """-
     # Don't proceed until all the other resources are available.
     barrier.wait()    
+    """
 
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
 
     control_loops = create_control_loops(args['controls'], app_state) 
+
+    # Don't proceed until all the other resources are available.
+    barrier.wait()    
 
     while not app_state['stop']:
 
