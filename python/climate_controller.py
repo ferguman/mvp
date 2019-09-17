@@ -801,8 +801,10 @@ def update_climate_state(min_log_period, control_loops):
 
     # Take an air temperature reading but only if one of the control functions needs the temperature.
     for c in control_loops:
-        if c['need'] == 'air_temp' and c['enabled']:
-            at = controller['get']('air_temp')
+        #- if c['need'] == 'air_temp' and c['enabled']:
+        if c['need'] and c['enabled'] and 'air_temp' in c['need']:
+            #- at = controller['get']('air_temp')
+            at = c['args'][0]['get']('air_temp')
             try:
                 climate_state['cur_air_temp'] = float(at['value'])
                 break
