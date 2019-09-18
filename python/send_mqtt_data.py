@@ -23,7 +23,12 @@ def send_sensor_data_via_mqtt_v2(s, mqtt_client, organization_id):
                     '"value":"'               + s['value'] + '", '\
                     '"units":"'               + s['units'] + '", '\
                     '"time":"'                + datetime.datetime.utcfromtimestamp(s['ts']).isoformat() + '"}'
-   
+  
+   # TODO Mosuqitto broker allows configuraton of an ACL list that controls topic 
+   # publication.  One can specify an ACL line of the form: pattern write
+   #      data/v2/%c where %c is a pattern that matches the client ID of the mqtt
+   #      conection.  This will allow the imposotion of the rule that fopd clients   #      can only publish write /data/v2/[client_id] topics and the broker will
+   #      will ignore all other published topics. Need to test this stuff and then   #      implement /data/v2/[client_id] publishing here.
    topic =  'data/v1/' + organization_id
 
    pub_response = mqtt_client.publish(topic, payload=payload_value, qos=2) 
@@ -61,4 +66,6 @@ def publish_sensor_reading(mqtt_client, org_id, sensor_reading):
 
 def publish_cmd_response(mqtt_client, org_id, response):
 
+    # TODO: Need to implement /cr/v2/[client_id] publishing. See note about ACLs
+    #       elsewhere in this file.
     publish_mqtt_topic(mqtt_client, 'cr/v1/' + org_id, response)

@@ -4,7 +4,7 @@ from subprocess import *
 from sys import path, exc_info
 from time import sleep, time
 
-import paho.mqtt.client
+#- import paho.mqtt.client
 import paho.mqtt.client as mqtt
 
 from python.logger import get_sub_logger 
@@ -62,7 +62,8 @@ def on_subscribe(mqtt, userdata, mid, granted_qos):
 def start_paho_mqtt_client(args, app_state, publish_queue):
 
     try:
-        mqtt_client = paho.mqtt.client.Client(args['mqtt_client_id'])
+        #- mqtt_client = paho.mqtt.client.Client(args['mqtt_client_id'])
+        mqtt_client = mqtt.Client(args['mqtt_client_id'])
 
         # Configure the client callback functions
         mqtt_client.on_connect = on_connect
@@ -106,9 +107,11 @@ def subscribe_for_commands(mqtt_client, device_id):
     # Subscribe to the broker so commands can be received.
     # QOS 2 = Exactly Once
     try:
-       result = mqtt_client.subscribe('cmd/' + device_id, 2)
+       topic = 'cmd/' + device_id
+       #- result = mqtt_client.subscribe('cmd/' + device_id, 2)
+       result = mqtt_client.subscribe(topic, 2)
        if result[0] == 0:
-           logger.info("MQTT subscription to topic foo/cmd requested")
+           logger.info('MQTT subscription to topic {} requested'.format(topic))
            # TBD: need to research what the following command does.
            # mqtt_client.topic_ack.append([topic_list, result[1],0])
        else:
