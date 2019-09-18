@@ -33,8 +33,8 @@ def make_get(vals):
 
 
 def make_sensor_list(args, sensor_readings):
-    """ Create a sensor class for each i2c sensor in the i2c sensor list.
-        return a list containing all the discovered classes.
+    """ Create a sensor class for each i2c sensor listed in the i2c_bus list.
+        Return a list containing all the classes.
         Note that each sensor class adds 0, 1, or more sensor reading values 
         to the sensor_readings array and these classes remember the indexes of their
         values so that they can update them with new sensor readings as
@@ -58,7 +58,7 @@ def make_sensor_list(args, sensor_readings):
 #
 i2c_lock = Lock()
 
-def update_i2c_sensor_readings(i2c_bus, sensors: list):
+def update_i2c_sensor_readings(sensors: list):
     """ ask each sensor to take readings and add them to the
         sensor_readings array. Note the sensor_readings array is
         passed to each sensor class as they are created so that
@@ -242,23 +242,20 @@ def make_cmd(controls: list):
 
     return cmd
 
-# TBD - make a long and short form of this command. The long form would be used by local console
-# for debuging. The short form would be used by MQTT to get the state of the arduiono.
-# show_state('long' | 'short')
-#
 #- def make_show_state(overrides: dict, values: list, commands: list):
-def make_show_state(values: list, commands: list):
+#- data_values and controls
+def make_show_state(data_values: list, controls: list):
 
     def show_state():
 
         # s = 'Camera Pose is {}.\n'.format('on' if overrides['camera_pose'] else 'off')
         s = ''
 
-        for v in values:
-            s = s + '{} = {} ({}).\n'.format(v['config']['name'], v['state'], v['config']['units'])
+        for v in data_values:
+            s = s + '{} = {} ({}).\n'.format(v['value_name'], v['value'], v['units'])
 
-        s = s + 'there are {} controls.\n'.format(len(commands))
-        for c in commands:
+        s = s + 'there are {} controls.\n'.format(len(controls))
+        for c in controls:
             s = s + '{} is {}.\n'.format(c['config']['name'], c['state'])
 
         return s
@@ -285,22 +282,22 @@ def start(app_state, args, b):
     app_state[args['name']]['help'] = make_help(args) 
     #- app_state[args['name']]['state'] = make_show_state(control_state, data_values, controls)
     app_state[args['name']]['state'] = make_show_state(data_values, controls)
-    #+ app_state[args['name']]['sensor_readings'] = get_sensor_readings(data_values)
+    app_state[args['name']]['sensor_readings'] = data_values
     #- app_state[args['name']]['get'] = make_get(vals)
     app_state[args['name']]['get'] = make_get(data_values)
    
     # Initialize the i2c sensors.
     # TODO: Currently this controller only supports i2c sensors but hopefully, one-wire, and other
     #       types of sensors can be added gracefully.
-    #- if 'i2c_bus' in args:
     #- i2c_sensors = make_sensor_list(args, vals)
-    #+ i2c_sensors = make_sensor_list(args, sensor_readings)
+    #- i2c_sensors = make_sensor_list(args, sensor_readings)
+    i2c_sensors = make_sensor_list(args, data_values)
 
     # Setup the GPIO based inputs and outputs
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     make_controls(args['controls'], controls)
-    make_data_values(args['data_values'], data_values)
+    #- make_data_values(args['data_values'], data_values)
 
     #- app_state[args['name']]['cmd'] = make_cmd(controls, control_state)
     app_state[args['name']]['cmd'] = make_cmd(controls)
@@ -314,7 +311,7 @@ def start(app_state, args, b):
         update_control_outputs(controls)
 
         # Read the i2c sensors
-        #+ update_i2c_sensor_readings(None, i2c_sensors) 
+        update_i2c_sensor_readings(i2c_sensors) 
 
         sleep(1)
 

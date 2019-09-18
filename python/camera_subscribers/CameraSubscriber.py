@@ -14,7 +14,8 @@ class CameraSubscriber():
         self.regex = re.compile(kwargs.get('frequency'))
 
         self.posting_url = kwargs.get('url')
-        self.destination_dir = kwargs.get('destination_dir')
+
+        #- self.destination_dir = kwargs.get('destination_dir')
 
         self.take_picture_on_start = kwargs.get('take_picture_on_start')
 
@@ -33,6 +34,11 @@ class CameraSubscriber():
         pass
 
     def wants_picture(self, time_stamp, startup_flag):
+        """ If the configuration regex gets a hit on the current hours and minutes and
+            the previous regex match failed then return true otherwise return false.
+            In other words only fire on a transition from the regex failing to the regex
+            passing.
+        """
 
         if startup_flag and self.take_picture_on_start:
             return True

@@ -1,6 +1,6 @@
 # fopd resource
 
-from os import getcwd
+from os import getcwd, path as os_path
 from datetime import datetime
 from time import sleep
 from subprocess import check_call, CalledProcessError, run, PIPE, STDOUT
@@ -8,6 +8,7 @@ from sys import path, exc_info
 from shutil import copyfile
 from threading import Lock
 
+from data_location import camera_image_directory
 from python.camera_subscribers.make_subscriber import get_camera_subscribers
 from python.logger import get_sub_logger 
 
@@ -27,7 +28,8 @@ def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fo
         repl(pose_on_cmd)
 
         file_name = '{:%Y%m%d_%H_%M_%S}.jpg'.format(datetime.utcnow())
-        file_location = '{}{}'.format(getcwd() + '/pictures/', file_name) 
+        file_location = os_path.join(camera_image_directory, file_name)
+        #- file_location = '{}{}'.format(getcwd() + '/pictures/', file_name) 
 
         camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp "%d-%m-%Y %H:%M:%S (%Z)"'\
                               + ' --verbose  --save {}'.format(file_location)
@@ -79,15 +81,6 @@ def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fo
         # Tell the light controller to go back to it's normal operation
         repl(pose_off_cmd)
 
-"""- 
-def make_snap(repl, pose_on_cmd, pose_off_cmd):
-
-    def snap_cmd():
-        # return snap(repl, pose_on_cmd, pose_off_cmd)
-        return lambda : snap(repl, pose_on_cmd, pose_off_cmd)
-
-    return snap_cmd
-"""
 
 def make_help(args):
     
