@@ -5,6 +5,10 @@
 # digital output pins. One must write python classes for each I2C device and specify
 # the class file name in the config file.
 #
+# This module uses the RPi.GPIO library.  There are other libraries such as
+# https://gpiozero.readthedocs.io/en/stable/installing.html.
+#
+#
 from threading import Lock
 from time import sleep
 import re
