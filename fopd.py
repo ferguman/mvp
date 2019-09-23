@@ -26,8 +26,14 @@
 # Make sure we are running a compatible version of python.
 
 # Add the path to the location of the configuration files.  
-from data_location import configuration_directory_location
+#- from data_location import configuration_directory_location
+from python.data_file_paths import configuration_directory_location
+
 from sys import path
+
+#TODO - I think that this path append is to allow the template engine to find the template files
+#       at ./config/template.  If the template engine is abandoned then this
+#       append can go away.
 path.append(configuration_directory_location)
 
 from check_python_version import check_python_version

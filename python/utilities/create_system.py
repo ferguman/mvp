@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 from python.encryption.nacl_fop import encrypt
 from python.utilities.prompt import prompt
 
-from data_location import configuration_directory_location
+from python.data_file_paths import configuration_directory_location
 
 def get_identity(sys_type: str) -> dict:
 

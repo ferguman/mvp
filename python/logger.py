@@ -3,7 +3,7 @@ from logging.config import dictConfig
 from logging.handlers import RotatingFileHandler
 from os import getcwd, path
 
-from data_location import log_directory
+from python.data_file_paths import log_directory
 
 # TBD:  Move the logging configuration to a dictionary stored in a configuration file.
 # On linux use tail -F (translates as tail --follow=name --retry) to follow the 

@@ -3,7 +3,7 @@ from python.camera_subscribers.CameraSubscriber import CameraSubscriber
 from shutil import copyfile
 from sys import exc_info
 
-from data_location import local_web_image_directory
+from python.data_file_paths import local_web_image_directory
 
 # Copy the picture to the web directory
 #

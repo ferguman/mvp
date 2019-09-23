@@ -7,8 +7,7 @@ from datetime import datetime
 
 from python.encryption.nacl_fop import decrypt
 
-from data_location import local_web_chart_directory
-#- from data_location import web_directory_location
+from python.data_file_paths import local_web_chart_directory
 from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
 
 enable_display_unit_error_msg = None 

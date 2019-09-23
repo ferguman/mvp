@@ -4,7 +4,8 @@ from base64 import standard_b64encode, standard_b64decode
 
 from nacl import secret, utils
 
-from data_location import configuration_directory_location
+from python.data_file_paths import configuration_directory_location
+
 
 #+ from config.private_key import nsk_b64
 

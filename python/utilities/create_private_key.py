@@ -5,7 +5,7 @@ from python.encryption.nacl_utils import create_random_key
 from python.term_text_colors import green, red
 from python.utilities.prompt import prompt
 
-from data_location import configuration_directory_location
+from python.data_file_paths import configuration_directory_location
 
 def create_private_key():
     """ Create a private key then put it in a private key file """

@@ -8,7 +8,7 @@ from sys import path, exc_info
 from shutil import copyfile
 from threading import Lock
 
-from data_location import camera_image_directory
+from python.data_file_paths import camera_image_directory
 from python.camera_subscribers.make_subscriber import get_camera_subscribers
 from python.logger import get_sub_logger 
 
