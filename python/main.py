@@ -1,4 +1,5 @@
 import threading
+from sys import exit, exc_info
 from time import sleep
 
 from importlib import import_module
@@ -6,7 +7,8 @@ from python.repl import start as repl_start
 from python.logger import get_top_level_logger
 
 
-def execute_main(args):
+def main(args):
+
 
     # NOTE: The placement of this import statement is important. It is placed here because one 
     #       cannot assume that a config file exists when fopd.py is run. For example the 
@@ -60,15 +62,23 @@ def execute_main(args):
     for t in tl:
         t.start()
 
-    # the following message is a lie.  The threads may or may not have passed the barrier
-    # at this point in time.
-    #- logger.info('fopd startup complete')
-
-    # Wait for non-daemon threads to complete.
+    # Stop here and Wait for non-daemon threads to complete.
     for t in tl:
         if not t.isDaemon():
             t.join()
 
+    # All the non-daemon threads have exited so exit fopd
     logger.info('fopd shutdown complete')
 
+    # Exit with an exit code of success (e.g. 0)
     return 0
+
+
+def execute_main(args):
+
+    try:
+        result = main(args)
+    except:
+        exit('fopd exiting on exception: {}{}'.format(exc_info()[0], exc_info()[1]))
+
+    exit(result)

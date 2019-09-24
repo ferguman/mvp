@@ -41,7 +41,8 @@ def make_on_message(app_state, publish_queue):
         logger.info('MQTT command received: userdata: {}, payload: {}'.format(userdata, message.payload.decode('utf-8')))
 
         # execute the command
-        #- logger.info('Command result: {}'.format(app_state['sys']['cmd'](message.payload.decode('utf-8'))))
+        # TODO: Need to add a signature to commands so that the fopd can confirm that the 
+        #       command was issued by the fop cloud.
         publish_queue.put(['cmd_response', app_state['sys']['cmd'](message.payload.decode('utf-8'))])
 
     return on_message
@@ -139,7 +140,7 @@ def start(app_state, args, b):
     if args['enable']:
 
         last_client_start_attempt_time = time()
-        # TODO app_state is too much to gie here. figure out what the 
+        # TODO app_state is too much to give here. figure out what the 
         # the function needs and only give that.
         # Note thgaty the pah mqtt cliern has the ability to spawn it's own thead.
         mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)

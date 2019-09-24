@@ -31,14 +31,14 @@ def help():
     available resources on your system. Example: camera.help().
     """
 
-def make_exit_mvp(app_state):
+def make_exit(app_state):
 
-    def exit_mvp():
-         app_state['stop'] = True
+    def exit_cmd():
          logger.info('shutting down')
+         app_state['stop'] = True
          return 'shutting down, please wait a few seconds.'
 
-    return exit_mvp
+    return exit_cmd
 
 def make_sys_dir_cmd(system):
 
@@ -70,7 +70,7 @@ def trans_cmds(input_str):
     global cmd_re
 
     # Python docs for re.sub(func, str): Return the string obtained by replacing the leftmost non-overlapping 
-    # occurrences of the regex pattern in str by the values obtained by apply func to the regex match strings.
+    # occurrences of the regex pattern in str by the values obtained by applying func to the regex match strings.
     #
     # 1st -> start with a string like:  abc.def.ghi(stuff)
     # 2nd -> find the part up to the paranthesis, eg. abc.def.ghi(
@@ -97,7 +97,7 @@ def make_run_cmd(repl_globals, app_state):
             # and local namespace.
             # Note that Python appears to parse the cmd string.  For example one can enter sys['help']() and 
             # the Python interpretter will successfully find the app_state['sys']['help'] object which is a
-            # function and then will run the function with an empty argument list. My point is that Python
+            # function and then will apply the function to the empty argument list. My point is that Python
             # is parsing the input to isolate 'sys' as a symbol that is to be interpretted as a dictionary
             # key to be found in either globals or locals.
             #
@@ -137,15 +137,9 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
     app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
 
     app_state['sys']['help'] = help
-    app_state['sys']['exit'] = make_exit_mvp(app_state)
+    app_state['sys']['exit'] = make_exit(app_state)
     app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
-
-    # TBD - considering adding a command: sys.inject(r[resource_name], 'start':'stop')
-    #       when in inject mode the system would pass the user input directory to resource 
-    #       as in -> ['app_state']['[resource_name]')['cmd'](user input))
-    #       This would make it easier to do things like spend time sending and receiving input
-    #       from the Arduino serial monitor.
 
     # Let the system know that you are good to go.
     if barrier:
