@@ -46,12 +46,12 @@ def start(app_state, args, b):
 
             logger.info('Logging sensor readings')
 
-            if 'sensor_readings' in app_state[args['source']]:
+            if args['source'] and 'sensor_readings' in app_state[args['source']]:
                 for r in app_state[args['source']]['sensor_readings']:
 
                     # check for empty values - don't log them. Warn somebody about it.
                     if r['value'] is None:
-                        logger.warning('Empyt value for {} {}'.format(r['subject'], r['attribute']))
+                        logger.warning('Empty value for {} {}'.format(r['subject'], r['attribute']))
                         continue 
                     if r['ts'] is None:
                         logger.warning('Empty time stamp for {} {}'.format(r['subject'], r['attribute']))
