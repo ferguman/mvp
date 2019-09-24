@@ -20,9 +20,14 @@ def verify_config_file():
          print('There is no configuration file present. Run the following commands:\n',
                'python fopd.py -u create_private_key\n',
                'python fopd.py -u create_system\n')
-         exit()
+         #- exit()
+         return False
+
+      else:
+         return True
          
    except:
        logger.error('Could not verify configuration file: {}, {} exiting ...'.format(\
                     exc_info()[0], exc_info()[1]))
-       exit()
+       #- exit()
+       return False

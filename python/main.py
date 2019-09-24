@@ -1,5 +1,4 @@
 import threading
-from sys import exit, exc_info
 from time import sleep
 
 from importlib import import_module
@@ -7,7 +6,7 @@ from python.repl import start as repl_start
 from python.logger import get_top_level_logger
 
 
-def main(args):
+def execute_main(args):
 
 
     # NOTE: The placement of this import statement is important. It is placed here because one 
@@ -72,13 +71,3 @@ def main(args):
 
     # Exit with an exit code of success (e.g. 0)
     return 0
-
-
-def execute_main(args):
-
-    try:
-        result = main(args)
-    except:
-        exit('fopd exiting on exception: {}{}'.format(exc_info()[0], exc_info()[1]))
-
-    exit(result)

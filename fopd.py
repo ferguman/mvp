@@ -29,7 +29,7 @@
 #- from data_location import configuration_directory_location
 from python.data_file_paths import configuration_directory_location
 
-from sys import path
+from sys import exc_info, exit, path
 
 #TODO - I think that this path append is to allow the template engine to find the template files
 #       at ./config/template.  If the template engine is abandoned then this
@@ -37,7 +37,9 @@ from sys import path
 path.append(configuration_directory_location)
 
 from check_python_version import check_python_version
-check_python_version()
+if not check_python_version():
+    exit('wrong python version - cannot run')
+
 
 from python.args import get_args
 from python.utilities.main import execute_utility
@@ -50,10 +52,29 @@ args = get_args()
 # If the user has specifed a utility then run it and then exit.
 if args.utility:
     execute_utility(args)
-    exit()
+    exit(0)
+
+"""+
+if pending_configuration:
+    for item in pending_configuration_items:
+        execute_utility(item['cmd'], item['args']) 
+        clear_configuraiton_item
+
+    # exit and wait for systemd to re-start the service.
+    exit(0)
+"""
 
 # Check that the configuration file is present and then load it.
-verify_config_file()
+if not verify_config_file():
+    exit('no configuration file - cannot run')
 
-execute_main(args)
-exit()
+try:
+    result = execute_main(args)
+except:
+    exit('fopd exiting on exception: {}{}'.format(exc_info()[0], exc_info()[1]))
+
+exit(result)
+
+#- execute_main(args)
+#- exit()
+
