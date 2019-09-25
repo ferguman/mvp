@@ -25,6 +25,7 @@ def get_top_level_logger(this_devices_name):
    device_name = this_devices_name
 
    logger = getLogger(device_name)
+   # TODO - Add a way to specify the level from the configuration file.
    logger.setLevel(INFO)
 
    handler = RotatingFileHandler(path.join(log_directory, 'fopd.log'), maxBytes=10*1000*1000,\

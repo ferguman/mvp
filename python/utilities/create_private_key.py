@@ -7,7 +7,13 @@ from python.utilities.prompt import prompt
 
 from python.data_file_paths import configuration_directory_location
 
-def create_private_key():
+def create_private_key(args: dict):
+
+    if len(args) != 0:
+        create_private_key_interactive()
+
+def create_private_key_interactive():
+
     """ Create a private key then put it in a private key file """
 
     print('This utility will ask you for your private key. It will give you the option of supplying')
@@ -57,6 +63,7 @@ def create_private_key():
 
     return 'OK'
 
+# TODO: See if this routine is used and if not remove it.
 def create_random_uuid():
     """Create a random UUID and print it at the console"""
     print(uuid4())
@@ -68,6 +75,5 @@ def create_config_directory() -> 'path_to_config_file':
         print('Creating directory named config at {}'.format(cp))
         system('sudo mkdir {}'.format(cp))
         system('sudo chown pi:pi {}'.format(cp))
-        #- mkdir(cp)
 
     return cp

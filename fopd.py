@@ -42,6 +42,7 @@ if not check_python_version():
 
 
 from python.args import get_args
+from python.initialize import initialize
 from python.utilities.main import execute_utility
 from python.main import execute_main
 from python.verify_config_files import verify_config_file
@@ -52,29 +53,35 @@ args = get_args()
 # If the user has specifed a utility then run it and then exit.
 if args.utility:
     execute_utility(args)
+    # exit normally
     exit(0)
 
-"""+
-if pending_configuration:
-    for item in pending_configuration_items:
-        execute_utility(item['cmd'], item['args']) 
-        clear_configuraiton_item
+# Check for initialization items in the system_state file.
+try:
+    initialization_performed = initialize()
+except:
+    # exit with error
+    exit('initialization error -  cannot run')
 
-    # exit and wait for systemd to re-start the service.
+if initialization_performed:
+    # It is assumed that the fopd must restart itself after
+    # any initializations so exit and wait for systemd to
+    # re-start the service.
     exit(0)
-"""
 
 # Check that the configuration file is present and then load it.
 if not verify_config_file():
+    # exit with error
     exit('no configuration file - cannot run')
 
+# If you've gotten this far then all preliminaries (e.g. initialization and 
+# system checks are successfully done so go ahead and run forever as a 
+# fopd.
 try:
     result = execute_main(args)
 except:
+    # exit with error
     exit('fopd exiting on exception: {}{}'.format(exc_info()[0], exc_info()[1]))
 
+# exit with the code returned by execute_main
 exit(result)
-
-#- execute_main(args)
-#- exit()
-

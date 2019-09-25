@@ -50,8 +50,8 @@ def make_sys_dir_cmd(system):
 
     return sys_dir
 
-cmd_re = re.compile(r'(([a-z_]{1,20}\.){0,5})[a-z_]{1,20}\(')
-cmd_parts_re = re.compile(r'([a-z_]{1,20}\.)|([a-z_]{1,20}\()')
+cmd_re = re.compile(r'(([a-z_]{1,25}\.){0,5})[a-z_]{1,25}\(')
+cmd_parts_re = re.compile(r'([a-z_]{1,25}\.)|([a-z_]{1,25}\()')
 
 def trans_cmd_part(match):
 
