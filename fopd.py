@@ -59,7 +59,6 @@ if args.utility:
 # Check for initialization items in the system_state file.
 try:
     initialization_performed = initialize()
-    print(initialization_performed)
 except:
     # exit with error
     exit('initialization error -  cannot run')
