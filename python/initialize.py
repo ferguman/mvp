@@ -46,9 +46,11 @@ def initialize():
               fopd_state = load(f)
               logger.info('beginning init list: {}'.format(fopd_state['pending_initialization']))
               completed_item_indexes = []
+
               for index, item in enumerate(fopd_state['pending_initialization']):
                   process_init_item(item)
                   completed_item_indexes.append(index)
+
               for index in completed_item_indexes:
                   print(index)
                   # TODO: need to remove completed items. the below two methods don't work
@@ -57,7 +59,19 @@ def initialize():
                   #       Instead rebuild the list without the completed items.
                   # del fopd_state['pending_initialization'][index]
                   #fopd_state['pending_initialization'].pop(index)
+
+              if len(completed_item_indexes) > 0:
+                  initialization_performed = True
+              else:
+                  initialization_performed = False 
+
+              new_init_list = []
+              for index, item in enumerate(fopd_state['pending_initialization']):
+                  if not index in completed_item_indexes:
+                      new_init_list.append(item)
+              fopd_state['pending_initialization'] = new_init_list
               logger.info('ending init list: {}'.format(fopd_state['pending_initialization']))
+
               """+
               # write the fopd state with completed initializations removed.
               
@@ -65,9 +79,11 @@ def initialize():
               f.seek(0)
               dump(fopd_state, f)
               """
+
+              return initialization_performed
            except:
               msg = 'cannot load and parse state file {}, {}, {}.'.format(state_file_path, exc_info()[0], exc_info()[1])
               logger.error(msg)
               raise Exception('initialization error')
-
-    return True 
+    else:
+        raise Exception('initialization error - no state file found.')
