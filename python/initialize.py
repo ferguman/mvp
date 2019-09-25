@@ -51,15 +51,6 @@ def initialize():
                   process_init_item(item)
                   completed_item_indexes.append(index)
 
-              for index in completed_item_indexes:
-                  print(index)
-                  # TODO: need to remove completed items. the below two methods don't work
-                  #       because afte the first pop the arrya is smaller and thus
-                  #       the indexes are all wrong.
-                  #       Instead rebuild the list without the completed items.
-                  # del fopd_state['pending_initialization'][index]
-                  #fopd_state['pending_initialization'].pop(index)
-
               if len(completed_item_indexes) > 0:
                   initialization_performed = True
               else:
