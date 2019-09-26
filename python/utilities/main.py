@@ -1,7 +1,8 @@
 from uuid import uuid4
+from logging import getLogger
 
 from python.encryption.nacl_fop import decrypt, encrypt
-from python.logger import get_top_level_logger
+#- from python.logger import get_top_level_logger
 from python.repl import start
 from python.utilities.create_private_key import create_private_key
 from python.utilities.create_system import create_system
@@ -38,9 +39,10 @@ def add_utilities(eval_state):
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
 
 
-def execute_utility(args, arg_source='namespace'):
+def execute_utility(args, arg_source='namespace', device_name='fopd'):
 
-    logger = get_top_level_logger('fopd')
+    #- logger = get_top_level_logger('fopd')
+    logger = getLogger(device_name + '.' + 'utility')
 
     # The reple will see stop = True and exit normally after it processess the start_cmd.
     eval_state = {'stop':True, 'sys':{'cmd':None}}

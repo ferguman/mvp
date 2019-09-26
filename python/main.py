@@ -1,13 +1,12 @@
 import threading
 from time import sleep
+from logging import getLogger
 
 from importlib import import_module
 from python.repl import start as repl_start
 from python.logger import get_top_level_logger
 
-
-def execute_main(args):
-
+def execute_main(args, default_device_name):
 
     # NOTE: The placement of this import statement is important. It is placed here because one 
     #       cannot assume that a config file exists when fopd.py is run. For example the 
@@ -16,7 +15,12 @@ def execute_main(args):
     #
     from config import system, device_name
 
-    logger = get_top_level_logger(device_name)
+    if default_device_name != device_name:
+        # get a logger keyed to the device name and as a side affect attach a rotating
+        # file handler.
+        logger = get_top_level_logger(device_name)
+    else:
+        logger = getLogger(default_device_name)
 
     logger.info('############## starting farm operation platform device ################')
 

@@ -1,9 +1,10 @@
 from json import load, dump
-from logging import DEBUG, INFO
+from logging import getLogger, DEBUG, INFO
 from sys import exc_info
 from os import path
 
-from python.logger import get_top_level_logger
+#- from python.logger import get_top_level_logger
+
 from python.data_file_paths import state_directory_location
 from python.utilities.main import execute_utility
 
@@ -24,12 +25,13 @@ def process_init_item(item):
     execute_utility(item, arg_source='dictionary')
 
 
-def initialize():
+def initialize(device_name):
 
     global fopd_state
 
-    logger = get_top_level_logger('fopd')
-    logger.setLevel(DEBUG)
+    #- logger = get_top_level_logger('fopd')
+    #- logger.setLevel(DEBUG)
+    logger = getLogger(device_name + '.init')
 
     logger.info('############## initializing fopd device  ################')
 
@@ -53,8 +55,10 @@ def initialize():
 
               if len(completed_item_indexes) > 0:
                   initialization_performed = True
+                  logger.info('Initializations were performed, so this instance of fopd will exit')
               else:
                   initialization_performed = False 
+                  logger.info('No Initializations were performed.')
 
               new_init_list = []
               for index, item in enumerate(fopd_state['pending_initialization']):
