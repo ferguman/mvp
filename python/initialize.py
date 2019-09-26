@@ -47,6 +47,11 @@ def initialize(device_name):
            try:
               fopd_state = load(f)
               logger.info('beginning init list: {}'.format(fopd_state['pending_initialization']))
+
+              if len(fopd_state['pending_initialization']) == 0:
+                 logger.info('There are no initializations in the fopd state file.')
+                 return False 
+
               completed_item_indexes = []
 
               for index, item in enumerate(fopd_state['pending_initialization']):
@@ -54,15 +59,21 @@ def initialize(device_name):
                   if result == 'OK':
                      completed_item_indexes.append(index)
                   else:
-                     raise Exception('initializaiton error in {}'.format(item)) 
+                     # raise Exception('initializaiton error in {}'.format(item)) 
+                     break
 
-              if len(completed_item_indexes) > 0:
-                  initialization_performed = True
-                  logger.info('Initializations were performed, so this instance of fopd will exit')
+              """-
+              #- if len(completed_item_indexes) > 0:
+              if len(completed_item_indexes) == len(fopd_state['pending_initialization']):
+                  initialization_completed = True
+                  logger.info('All initializations were performed, so this instance of fopd will exit.')
               else:
-                  initialization_performed = False 
+                  initialization_completed = False 
                   logger.info('No Initializations were performed.')
+              """
 
+              # Remove the completed items from the state file so that on future starts
+              # they will not be applied.
               new_init_list = []
               for index, item in enumerate(fopd_state['pending_initialization']):
                   if not index in completed_item_indexes:
@@ -78,7 +89,8 @@ def initialize(device_name):
               dump(fopd_state, f)
               """
 
-              return initialization_performed
+              #- return initialization_completed
+              return True 
            except:
               msg = 'cannot load and parse state file {}, {}, {}.'.format(state_file_path, exc_info()[0], exc_info()[1])
               logger.error(msg)

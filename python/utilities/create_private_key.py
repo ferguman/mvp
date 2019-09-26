@@ -21,11 +21,15 @@ def auto_create_private_key_file(args):
     pkfp = path.join(configuration_directory_location, 'private_key')
     
     if path.isfile(pkfp):
-        logger.info('ERROR: found private key file. Will not overwrite it.')
+        logger.error('ERROR: The private key file already exists. Will not overwrite it.')
         return 'ERROR'
     else:
         logger.info('no private key file currently exists')
      
+        with open(pkfp, 'wb') as f:
+           f.write(key)
+
+    return 'OK'
 
 def create_private_key_interactive():
 
