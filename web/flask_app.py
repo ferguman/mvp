@@ -1,6 +1,8 @@
-from flask import Flask, render_template, __version__, make_response
-from python.logger import get_sub_logger 
+from sys import exc_info
 
+from flask import Flask, render_template, __version__, make_response
+
+from python.logger import get_sub_logger 
 
 class fopdwFlask(Flask):
 
@@ -58,4 +60,11 @@ def start(app_state, args, barrier):
 
     # Start the Flask application. Note: app.run does not return.
     if not app_state['stop']:
-        app.run(host=args['host'], port=args['port'])
+
+        try:
+           app.run(host=args['host'], port=args['port'])
+        except:
+           logger.error('Local web server has crashed: {}'.format(exc_info()[0], exc_info()[1]))
+
+
+        logger.error('fopd will continue running, however the local webserver has stoppped')
