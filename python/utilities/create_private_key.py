@@ -1,16 +1,31 @@
-#- from os import path, getcwd, mkdir
 from os import path, getcwd, system
-
 from python.encryption.nacl_utils import create_random_key
 from python.term_text_colors import green, red
 from python.utilities.prompt import prompt
 
 from python.data_file_paths import configuration_directory_location
+from python.logger import get_sub_logger 
+
 
 def create_private_key(args: dict):
 
-    if len(args) != 0:
+    if len(args) == 0:
         create_private_key_interactive()
+    else:
+        return auto_create_private_key_file(args)
+
+def auto_create_private_key_file(args):
+
+    logger = get_sub_logger('create_private_key_file')
+
+    pkfp = path.join(configuration_directory_location, 'private_key')
+    
+    if path.isfile(pkfp):
+        logger.info('ERROR: found private key file. Will not overwrite it.')
+        return 'ERROR'
+    else:
+        logger.info('no private key file currently exists')
+     
 
 def create_private_key_interactive():
 

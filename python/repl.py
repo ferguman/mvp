@@ -101,6 +101,10 @@ def make_run_cmd(repl_globals, app_state):
             # is parsing the input to isolate 'sys' as a symbol that is to be interpretted as a dictionary
             # key to be found in either globals or locals.
             #
+            # Note that the repl_globals and app_state only apply to the trans_cmds(cmd) statement resolution.
+            #      If cmd is a reference to other functions then those functions run within the context of the 
+            #      the already compiled Python code. 
+            #      See https://stackoverflow.com/questions/43349334/eval-globals-and-locals-argument-do-not-work-as-expected
             return eval(trans_cmds(cmd), repl_globals, app_state)
         except:
             logger.error('python command: {}, {}, {}'.format(cmd, exc_info()[0], exc_info()[1]))
@@ -132,6 +136,7 @@ def make_shut_down_werkzeug(app_state):
 
 def start(app_state, silent_mode, barrier, start_cmd=None):
 
+    # repl_globals = {'__builtins__':None, 'logger':logger}
     repl_globals = {'__builtins__':None}
 
     app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
@@ -153,7 +158,10 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
             app_state['stop'] = True
 
     if start_cmd:
-        print(app_state['sys']['cmd'](start_cmd))
+        if silent_mode:
+           return app_state['sys']['cmd'](start_cmd)
+        else:
+           print(app_state['sys']['cmd'](start_cmd))
 
     if not app_state['stop']:    
         print('Enter: sys.help() to see a list of available commands.')

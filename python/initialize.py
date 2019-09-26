@@ -19,7 +19,7 @@ fopd_state = {}
 }
 """
 
-def process_init_item(item):
+def process_init_item(item, logger):
 
     item['silent'] = True
     execute_utility(item, arg_source='dictionary')
@@ -50,8 +50,11 @@ def initialize(device_name):
               completed_item_indexes = []
 
               for index, item in enumerate(fopd_state['pending_initialization']):
-                  process_init_item(item)
-                  completed_item_indexes.append(index)
+                  result = process_init_item(item, logger)
+                  if result == 'OK':
+                     completed_item_indexes.append(index)
+                  else:
+                     raise Exception('initializaiton error in {}'.format(item)) 
 
               if len(completed_item_indexes) > 0:
                   initialization_performed = True
