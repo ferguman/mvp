@@ -21,18 +21,15 @@ fopd_state = {}
 
 def process_init_item(item, logger):
 
-    item['silent'] = True
-    execute_utility(item, arg_source='dictionary')
+    item['args']['silent'] = True
+    return execute_utility(item, arg_source='dictionary')
 
 
 def initialize(device_name):
 
     global fopd_state
 
-    #- logger = get_top_level_logger('fopd')
-    #- logger.setLevel(DEBUG)
     logger = getLogger(device_name + '.init')
-
     logger.info('############## initializing fopd device  ################')
 
     global fopd_state
@@ -55,11 +52,10 @@ def initialize(device_name):
               completed_item_indexes = []
 
               for index, item in enumerate(fopd_state['pending_initialization']):
-                  result = process_init_item(item, logger)
-                  if result == 'OK':
+                  if process_init_item(item, logger):
                      completed_item_indexes.append(index)
                   else:
-                     # raise Exception('initializaiton error in {}'.format(item)) 
+                     # the current item failed so stop initializing. 
                      break
 
               """-

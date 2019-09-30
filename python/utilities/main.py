@@ -1,14 +1,16 @@
-from uuid import uuid4
 from logging import getLogger
+from os import path
+from uuid import uuid4
+from sys import exc_info
 
+from python.data_file_paths import couchdb_local_config_file_directory
+from python.random_password import generate_password
 from python.encryption.nacl_fop import decrypt, encrypt
-#- from python.logger import get_top_level_logger
+from python.logger import get_sub_logger 
 from python.repl import start
 from python.utilities.create_private_key import create_private_key
 from python.utilities.create_system import create_system
 from python.utilities.create_service_file import create_service_file
-
-#-logger = get_top_level_logger('fopd')
 
 def create_random_uuid():
     """Create a random UUID and print it at the console"""
@@ -24,7 +26,34 @@ def encrypt_util(pt):
     return 'OK'
 
 def reset_couchdb_passwords(args):
-    return 'OK'
+
+    try:    
+        logger = get_sub_logger('reset_couchdb_passwords')
+
+        # get a random value for the couchd admin user
+        admin_password = generate_password(16)
+
+        # write the password to the couchdb configuration file
+        couchdb_config_file_path = path.join(couchdb_local_config_file_directory, 'local.ini')
+
+        with open(couchdb_config_file_path, 'r+') as f:
+            # if in save mode then comment out hte current password line
+            # else replace the current password line with the new one
+            l = f.readli:
+
+            pass
+
+        # get a random value for the fopd couchdb user password
+        fopd_password = generate_password(16)
+        #- logger.info('password: {}'.format(fopd_password))
+
+
+
+        return True if args['silent'] else 'OK'
+
+    except:
+        logger.error('Exception in reset_couchdb_passwords: {}, {}'.format(exc_info()[0], exc_info()[1]))
+        return False
 
 
 def add_utilities(eval_state):
@@ -39,7 +68,7 @@ def add_utilities(eval_state):
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
 
 
-def execute_utility(args, arg_source='namespace', device_name='fopd'):
+def execute_utility(cmd, arg_source='namespace', device_name='fopd'):
 
     #- logger = get_top_level_logger('fopd')
     logger = getLogger(device_name + '.' + 'utility')
@@ -54,19 +83,19 @@ def execute_utility(args, arg_source='namespace', device_name='fopd'):
     # Run the repl and start with the selected utility. 
     # def start(app_state, silent_mode, barrier, start_cmd=None):
     if arg_source == 'namespace':
-       print('utils.' + args.utility +'()')
-       if args.utility == 'encrypt':
-          print('input: {}'.format(args.utility_input.encode('utf-8')))
-          start(eval_state, args.silent, None, start_cmd='utils.' + args.utility +'({})'.format(args.utility_input.encode('utf-8')))
-       elif args.utility == 'decrypt':
+       print('utils.' + cmd.utility +'()')
+       if cmd.utility == 'encrypt':
+          print('input: {}'.format(cmd.utility_input.encode('utf-8')))
+          start(eval_state, cmd.silent, None, start_cmd='utils.' + cmd.utility +'({})'.format(cmd.utility_input.encode('utf-8')))
+       elif cmd.utility == 'decrypt':
           #TODO: Need to get the decrypt command working
-          print('input: {}'.format(args.utility_input))
-          start(eval_state, args.silent, None, start_cmd='utils.' + args.utility +'({})'.format(args.utility_input))
+          print('input: {}'.format(cmd.utility_input))
+          start(eval_state, cmd.silent, None, start_cmd='utils.' + cmd.utility +'({})'.format(cmd.utility_input))
        else:
-          start(eval_state, args.silent, None, start_cmd='utils.' + args.utility +'()')
+          start(eval_state, cmd.silent, None, start_cmd='utils.' + cmd.utility +'()')
     elif arg_source == 'dictionary':
-        start(eval_state, args['silent'], None, start_cmd='utils.' + args['cmd'] + '({})'.format(args['args']))
-        return True
+        return start(eval_state, cmd['args']['silent'], None, start_cmd='utils.' + cmd['cmd'] + '({})'.format(cmd['args']))
+        #- return True
     else:
         raise Exception('error, unknown arg_source')
 

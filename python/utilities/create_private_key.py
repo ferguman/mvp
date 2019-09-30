@@ -1,11 +1,11 @@
 from os import path, getcwd, system
+from sys import exc_info
+
 from python.encryption.nacl_utils import create_random_key
 from python.term_text_colors import green, red
 from python.utilities.prompt import prompt
-
 from python.data_file_paths import configuration_directory_location
 from python.logger import get_sub_logger 
-
 
 def create_private_key(args: dict):
 
@@ -16,20 +16,28 @@ def create_private_key(args: dict):
 
 def auto_create_private_key_file(args):
 
-    logger = get_sub_logger('create_private_key_file')
+    try:
+        logger = get_sub_logger('create_private_key_file')
 
-    pkfp = path.join(configuration_directory_location, 'private_key')
+        #- logger.info('args: {}'.format(args))
+
+        pkfp = path.join(configuration_directory_location, 'private_key')
     
-    if path.isfile(pkfp):
-        logger.error('ERROR: The private key file already exists. Will not overwrite it.')
-        return 'ERROR'
-    else:
-        logger.info('no private key file currently exists')
+        if path.isfile(pkfp):
+            logger.error('ERROR: The private key file already exists. Will not overwrite it.')
+            return False if args['silent'] else 'ERROR' 
+            #- return 'ERROR'
+        else:
      
-        with open(pkfp, 'wb') as f:
-           f.write(key)
+            with open(pkfp, 'wb') as f:
+                f.write(create_random_key())
+                logger.info('Created a file at {} containing a random key.'.format(pkfp))
 
-    return 'OK'
+        return True if args['silent'] else 'OK' 
+        #- return 'OK'
+    except:
+        logger.error('Exception in auto_create_private_key: {}, {}'.format(exc_info()[0], exc_info()[1]))
+        return False
 
 def create_private_key_interactive():
 
