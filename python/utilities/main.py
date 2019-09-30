@@ -25,6 +25,8 @@ def encrypt_util(pt):
     print(encrypt(pt))
     return 'OK'
 
+import fileinput
+
 def reset_couchdb_passwords(args):
 
     try:    
@@ -36,12 +38,15 @@ def reset_couchdb_passwords(args):
         # write the password to the couchdb configuration file
         couchdb_config_file_path = path.join(couchdb_local_config_file_directory, 'local.ini')
 
-        with open(couchdb_config_file_path, 'r+') as f:
-            # if in save mode then comment out hte current password line
-            # else replace the current password line with the new one
-            l = f.readli:
+        re.compile(r'^admin[ |\t]*=')
+        with fileinput.input(files=(couchdb_config_file_path,)) as f:
+            for line in f:
+                if line_is_pwd_line():
+                    if True #+ save_old_line
+                       line = '; ' + line
+                    print('admin = {}'.format(admin_password)) 
+                    break
 
-            pass
 
         # get a random value for the fopd couchdb user password
         fopd_password = generate_password(16)
