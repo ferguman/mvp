@@ -3,7 +3,7 @@ from os import path
 from uuid import uuid4
 from sys import exc_info
 
-from python.data_file_paths import couchdb_local_config_file_directory
+from python.data_file_paths import couchdb_local_config_file_directory, configuration_directory_location
 from python.random_password import generate_password
 from python.encryption.nacl_fop import decrypt, encrypt
 from python.logger import get_sub_logger 
@@ -26,33 +26,68 @@ def encrypt_util(pt):
     return 'OK'
 
 import fileinput
+import re
+from subprocess import run 
+
+logger = get_sub_logger('reset_couchdb_passwords')
+
+def change_file_line(fp, line_search_re_str, new_line):
+
+    try:
+        line_search_re = re.compile(line_search_re_str)
+
+        changed = False
+
+        logger.info('opening {}'.format(fp))
+        with open(fp, mode='r+') as f:
+            lines = f.readlines()
+            f.seek(0)
+
+            for line in lines:
+                if line_search_re.search(line):
+                    f.write(new_line)
+                    changed = True
+                else:
+                    # Not the target line so write it back.
+                    f.write(line)
+
+            f.truncate()
+
+        return changed
+    except:
+        logger.error('change_file_line error {}'.format(exc_info()[0], exc_info()[1]))
+        return False
 
 def reset_couchdb_passwords(args):
 
     try:    
-        logger = get_sub_logger('reset_couchdb_passwords')
-
-        # get a random value for the couchd admin user
-        admin_password = generate_password(16)
 
         # write the password to the couchdb configuration file
-        couchdb_config_file_path = path.join(couchdb_local_config_file_directory, 'local.ini')
+        logger.info('changing couchdb password in local.ini. Reset the couchdb service to take up the new password.')
+        # Note: The couchdb service updates the local.ini file to contain the hashed password instead of the plaintext
+        #       password. So the admin password is essentially unknown.  
+        pwd = generate_password(16)
+        pwd_changed = change_file_line(path.join(couchdb_local_config_file_directory, 'local.ini'),
+                                                 r'^admin[ |\t]*=', 'admin = {}\n'.format(pwd))
+        
+        if not pwd_changed:
+            logger.error('Unable to reset the couchdb admin password.')
+            raise Exception('ERROR: unable to reset couchdb admin password.')
+        else:
+            logger.info('Writing the couchdb admin password to the config file.')
+            change_file_line(path.join(configuration_directory_location, 'config.py'), 
+                             r'^couchdb_admin_password_b64_cipher[ |\t]*=', 
+                             'couchdb_admin_password_b64_cipher = {}\n'.format(encrypt(pwd.encode('utf-8'))))
 
-        re.compile(r'^admin[ |\t]*=')
-        with fileinput.input(files=(couchdb_config_file_path,)) as f:
-            for line in f:
-                if line_is_pwd_line():
-                    if True #+ save_old_line
-                       line = '; ' + line
-                    print('admin = {}'.format(admin_password)) 
-                    break
-
+            logger.info('Restarting couchdb so that the admin password change is taken up.')
+            run('sudo systemctl restart couchdb', shell=True)
+            
 
         # get a random value for the fopd couchdb user password
         fopd_password = generate_password(16)
         #- logger.info('password: {}'.format(fopd_password))
 
-
+        # TODO: Need to post to the local couchdb server a new password for fopd.
 
         return True if args['silent'] else 'OK'
 
@@ -72,7 +107,12 @@ def add_utilities(eval_state):
     eval_state['utils']['encrypt'] = encrypt_util
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
 
-
+#+ TODO: Create a fopd initiliaation routine that does this ->  
+#        sudo chown -R couchdb:couchdb couchdb
+#        sudo usermod -a -G couchdb pi
+#        sudo chmod /fopd/couchdb/etc 775
+#        sudo chmod /dopd/couchdb/etc/local.ini 664
+#
 def execute_utility(cmd, arg_source='namespace', device_name='fopd'):
 
     #- logger = get_top_level_logger('fopd')
