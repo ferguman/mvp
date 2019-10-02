@@ -56,9 +56,9 @@ def reset_couchdb_passwords(args):
             logger.info('resetting fopd couchdb password')
             new_fopd_pwd = generate_password(16)
            
-            #+ """ DEBUG
-            print('admin password {}'.format(couchdb_pwd))
-            print('fopd password {}'.format(new_fopd_pwd))
+            #+ DEBUG
+            # print('admin password {}'.format(couchdb_pwd))
+            # print('fopd password {}'.format(new_fopd_pwd))
             #+ """
 
             # The couchdb API is a JSON driven website. POST to this API a request
