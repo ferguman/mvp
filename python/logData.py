@@ -4,7 +4,7 @@ from datetime import tzinfo, datetime
 import requests
 import json
 
-from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+from config import local_couchdb_url, couchdb_username, couchdb_password_b64_cipher 
 from python.encryption.nacl_fop import decrypt
 from python.logger import get_sub_logger 
 
@@ -53,8 +53,7 @@ def logDB(r, comment=''):
 
     try:
         r = requests.post(local_couchdb_url, data = json_data, headers=headers, 
-                          auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
-                                decrypt(couchdb_password_b64_cipher).decode('utf-8')))
+                          auth=(couchdb_username, decrypt(couchdb_password_b64_cipher).decode('utf-8')))
         if r.status_code != 201:
             logger.error('local couchdb return an error code: {}, {}...'.format(r.status_code, r.text[0:100]))
     except:

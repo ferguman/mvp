@@ -50,11 +50,11 @@ def get_jwt_info(sys_type: str) -> dict:
 
 def get_couchdb_info(sys_type:str) -> dict:
 
-    vals = ('local_couchdb_url', 'couchdb_username_b64_cipher', 'couchdb_password_b64_cipher')
+    vals = ('local_couchdb_url', 'couchdb_username', 'couchdb_password_b64_cipher')
     prompts = {'local_couchdb_url':'Enter the URL of your local couchdb server:',
-               'couchdb_username_b64_cipher':'Enter the couchdb username:',
+               'couchdb_username':'Enter the couchdb username:',
                'couchdb_password_b64_cipher':'Enter the couchdb password:'}
-    generators = {'couchdb_username_b64_cipher':{'default':lambda s: encrypt(bytes(s, 'utf-8'))},
+    generators = {'couchdb_username':{'default':lambda s: encrypt(bytes(s, 'utf-8'))},
                   'couchdb_password_b64_cipher':{'default':lambda s: encrypt(bytes(s, 'utf-8'))}}
     return prompt(vals, prompts, generators)
 

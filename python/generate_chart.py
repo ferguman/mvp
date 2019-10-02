@@ -8,7 +8,7 @@ from datetime import datetime
 from python.encryption.nacl_fop import decrypt
 
 from python.data_file_paths import local_web_chart_directory
-from config import local_couchdb_url, couchdb_username_b64_cipher, couchdb_password_b64_cipher 
+from config import local_couchdb_url, couchdb_username, couchdb_password_b64_cipher 
 
 enable_display_unit_error_msg = None 
 
@@ -55,8 +55,7 @@ def get_chart_data(couchdb_url, chart_info, logger):
     
     try:
         r = requests.get(couch_query,
-                         auth=(decrypt(couchdb_username_b64_cipher).decode('utf-8'),
-                         decrypt(couchdb_password_b64_cipher).decode('utf-8')))
+                         auth=(couchdb_username, decrypt(couchdb_password_b64_cipher).decode('utf-8')))
 
         if r.status_code != 200: 
             logger.error('local couchdb return an error code: {}, {}...'.format(r.status_code, r.text[0:100]))

@@ -10,7 +10,11 @@ from python.utilities.main import execute_utility
 
 fopd_state = {}
 
-"""-
+"""
+Add initializations commands to the pending_initialization dictionary
+in the system_state file.  The text below contains all the current
+(as of 10/3/2019) initalization commands.
+
 {
    "pending_initialization": [
       {"cmd":"create_private_key", "args":{"mode":"auto"}},
@@ -57,16 +61,6 @@ def initialize(device_name):
                   else:
                      # the current item failed so stop initializing. 
                      break
-
-              """-
-              #- if len(completed_item_indexes) > 0:
-              if len(completed_item_indexes) == len(fopd_state['pending_initialization']):
-                  initialization_completed = True
-                  logger.info('All initializations were performed, so this instance of fopd will exit.')
-              else:
-                  initialization_completed = False 
-                  logger.info('No Initializations were performed.')
-              """
 
               # Remove the completed items from the state file so that on future starts
               # they will not be applied.
