@@ -32,6 +32,8 @@ def start(app_state, args, barrier):
                        (e.g. 'chart_list_source':None)
     '''
 
+    #TODO - add authentication to the application.
+
     logger.info('starting Flask version {}'.format(__version__))
 
     app = fopdwFlask(__name__)
@@ -43,12 +45,21 @@ def start(app_state, args, barrier):
             cl = app_state[args['chart_list_source']]['chart_list']
         else:
             cl = [] 
-        #- resp = make_response(render_template('home.html', chart_list=cl, num_of_charts=len(cl)))
         resp = make_response(render_template('home.html', 
                                              chart_list=cl, num_of_charts=len(cl)))
 
         resp.headers['Cache-Control'] = 'max-age:0, must-revalidate'
         return resp
+
+    @app.route('/config.html')
+    def config():
+        return make_response(render_template('config.html'))
+
+    
+    @app.route('/v1/mqtt_status')
+    def mqtt_status():
+        return make_response(app_state['mqtt']['status']())
+
 
     # Let the system know that you are good to go.
     try:

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Grow Device Dashboard</title>
+<link rel=stylesheet href="static/styles.css">
+</head>
+<body>
+<div class="tab">
+  <button onclick="window.location.href = '/';">Home</button>
+  <!-- 
+  <button class="tablinks" v-on:click="open_image_tab">Camera</button>
+  <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
+  <button class="tablinks" v-on:click="open_status_tab">Status</button>
+  <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
+  -->
+  <!-- <button class="tablinks" v-on:click="open_config_tab">Config</button> -->
+  <button onclick="window.location.href = 'config.html';">Config</button>
+  <!--
+  <button class="tablinks" onclick="openTab(event, 'About')">About</button>
+  -->
+</div>
+(% block content %)(% endblock %)
+</body>
+</html>

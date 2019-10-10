@@ -17,6 +17,9 @@ mqtt_connection_results = ('connection successful', 'connection refused - incorr
                            'connection refused - invalid client identifier', 'connection refused - server unavailable',
                            'connection refused - bad username or password', 'connection refused - not authorised')
 
+connection_rc = None
+connection_flags = None
+
 def connection_result(rc):
     if rc >= 0 and rc <= 5:
         return mqtt_connection_results[rc]
@@ -26,10 +29,22 @@ def connection_result(rc):
 
 def on_connect(client, userdata, flags, rc):
 
+    global connection_rc, connection_flags
+    connection_rc = rc
+    connection_flags = flags
+
     if rc == 0:
         logger.info('mqtt broker connection successful')
     else:
         logger.error('mqtt broker connection failed: {}:{}'.format(rc, connection_result(rc)))
+
+
+def on_disconnect(mqtt, userdata, rc):
+
+    global connection_rc
+    connection_rc = rc
+    
+    logger.warning('MQTT Disconnected.')
 
 
 def make_on_message(app_state, publish_queue):
@@ -46,12 +61,13 @@ def make_on_message(app_state, publish_queue):
         publish_queue.put(['cmd_response', app_state['sys']['cmd'](message.payload.decode('utf-8'))])
 
     return on_message
-   
-def on_publish(mqttc, obj, mid):
-   logger.debug('MQTT message published, mid={}'.format(mid))
 
-def on_disconnect(mqtt, userdata, rc):
-   logger.warning('MQTT Disconnected.')
+
+def on_publish(mqttc, obj, mid):
+   global status
+
+   logger.debug('MQTT message published, mid={}'.format(mid))
+   status['connected'] = False
 
 def on_subscribe(mqtt, userdata, mid, granted_qos):
 
@@ -63,7 +79,6 @@ def on_subscribe(mqtt, userdata, mid, granted_qos):
 def start_paho_mqtt_client(args, app_state, publish_queue):
 
     try:
-        #- mqtt_client = paho.mqtt.client.Client(args['mqtt_client_id'])
         mqtt_client = mqtt.Client(args['mqtt_client_id'])
 
         # Configure the client callback functions
@@ -84,7 +99,9 @@ def start_paho_mqtt_client(args, app_state, publish_queue):
 
         mqtt_client.connect(args['mqtt_url'], args['mqtt_port'], 60)
 
-        # Start the MQTT client
+        # Start the MQTT client - loop_start causes the mqtt_client to spawn a backround thread which
+        #                         handles the mqtt communications.  The loop_start call thus
+        #                         returns control to this thread immediately.
         mqtt_client.loop_start()
 
         return mqtt_client
@@ -96,10 +113,34 @@ def make_mqtt_help(res_name):
 
     def mqtt_help():
         return """\
-        {0}.publish(sensor_reading) - Publish a sensor reading..
+        {0}.publish(sensor_reading) - Publish a sensor reading.
         """.format(res_name)
 
     return mqtt_help
+
+def rc_text(rc):
+
+    if rc:
+
+        rc_text = {0:'Connection successful', 1:'Connection refused - incorrect protocol version',
+                   2:'Connection refused - invalid client identifier', 3:'Connection refused - server unavailable',
+                   4:'Connection refused - bad username or password', 5:'Connection refused - not authorised'}
+
+        if rc >= 0 and rc <= 5:
+            return rc_text[rc]
+        else:
+            return 'unknown connection result code: {}'.format(rc)
+    else:
+       return None 
+
+
+def make_mqtt_status_cmd():
+
+    def mqtt_status():
+        global connection_rc, connection_flags
+        return('connection code: {}, connection_flags: {}'.format(rc_text(connection_rc), connection_flags))
+
+    return mqtt_status
 
 
 def subscribe_for_commands(mqtt_client, device_id):
@@ -134,6 +175,7 @@ def start(app_state, args, b):
     publish_queue = Queue()
     app_state[args['name']]['publish_queue'] = publish_queue
     app_state[args['name']]['help'] = make_mqtt_help(args['name'])
+    app_state[args['name']]['status'] = make_mqtt_status_cmd()
 
     mqtt_client = None
 
@@ -142,9 +184,8 @@ def start(app_state, args, b):
         last_client_start_attempt_time = time()
         # TODO app_state is too much to give here. figure out what the 
         # the function needs and only give that.
-        # Note thgaty the pah mqtt cliern has the ability to spawn it's own thead.
+        # Note that the paho mqtt client has the ability to spawn it's own thead.
         mqtt_client = start_paho_mqtt_client(args, app_state, publish_queue)
-        
 
         if mqtt_client: 
             subscribe_for_commands(mqtt_client, args['mqtt_client_id'])

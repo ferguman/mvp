@@ -1,60 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-<style>
-body {font-family: "Lato", sans-serif;}
-
-/* Style the tab */
-div.tab {
-   overflow: hidden;
-   border: 1px solid #ccc;
-   background-color: #f1f1f1;
-}
-/* Style the buttons inside the tab */
-div.tab button {
-    background-color: inherit;
-    float: left;
-    border: none;
-    outline: none;
-    cursor: pointer;
-    padding: 14px 16px;
-    transition: 0.3s;
-    font-size: 17px;
-}
-
-/* Change background color of buttons on hover */
-div.tab button:hover {
-    background-color: #ddd;
-}
-
-/* Create an active/current tablink class */
-div.tab button.active {
-    background-color: #ccc;
-}
-/* Style the tab content */
-.tabcontent {
-    display: none;
-    padding: 6px 12px;
-    border: 1px solid #ccc;
-    border-top: none;
-}
-
-</style>
-<head>
 <title>Grow Device Dashboard</title>
-
-
+<link rel=stylesheet href="static/styles.css">
 </head>
 <body onload="openTab(event, 'Charts');">
 <div id="fopdw">
-
 <div class="tab">
   <button class="tablinks" v-on:click="open_charts_tab">Charts</button>
   <button class="tablinks" v-on:click="open_image_tab">Camera</button>
+  <!-- 
   <button class="tablinks" onclick="openTab(event, 'Data Entry')">Data Entry</button>
   <button class="tablinks" v-on:click="open_status_tab">Status</button>
   <button class="tablinks" onclick="openTab(event, 'Cloud')">Cloud</button>
-  <button class="tablinks" onclick="openTab(event, 'Config')">Config</button>
+  -->
+  <!-- <button class="tablinks" v-on:click="open_config_tab">Config</button> -->
+  <button onclick="window.location.href = 'config.html';">Config</button>
   <button class="tablinks" onclick="openTab(event, 'About')">About</button>
 </div>
 
@@ -85,35 +46,6 @@ div.tab button.active {
     <p><label>Air Temp.</label>Not Available
 </div>
 
-<div id="Config" class="tabcontent">
-  <h3>Config</h3>
-    <p>Hotspot SSID: <input type="text" name="hotspot_ssid">
-    <input type="radio" name="hotspot_state" value="on"> On
-    <input type="radio" name="hotspot_state" value="off"> Off</br>
-    Hotspot Passphrase: <input type="password" name="hotspot_passphrase"></br>
-    Note: The hotspot switch must be set to "auto" in order to turn your hotspot off. When the switch is set to "on" then the hotspot will always be on.
-    </p>
-
-    <p>
-    Hostname: <input type="text" name="hostname"></br>
-    </p>
-
-    <p>
-    Wi-Fi SSID: <input type="text" name="wifi_ssid"></br>
-    Passphrase: <input type="text" name="wifi_passphrase"></br>
-    Enter your local network Wi-Fi information here if you wish the fopd to connect to your network. In order to access your fopd from your local network you must use one of Ethernet, fopd Hotspot, or local network Wi-Fi. In order to access the fopd cloud you must use one of Ethernet or network Wi-Fi.
-
-    <p>
-    Raspbian user name: pi</br>
-    Lock Pi account:<input type="checkbox" name="lock_pi_account" value="true">Disables password based access. SSH key based authentication will still work.</br> 
-    Password: <input type="password" name="password"></br>
-    Repeat Password: <input type="password" name="repeat_password"></br>
-    Your public SSH Key: <input type="textarea" name="public_ssh_key"> Set a key to enable SSH key based authentication.
-    </p>
-
-    <button>Update</button>
-</div>
-
 <div id="About" class="tabcontent">
 
 <p><b>Release Version:</b>Carrot</p>
@@ -126,6 +58,7 @@ This is open source software.  Source code is available at the <a target="_blank
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
 <script>
 var app = new Vue({
     el: '#fopdw',
@@ -161,6 +94,10 @@ var app = new Vue({
         open_status_tab: function(event) {
 	    openTab(event, 'Status');
 	    this.update_status();
+        },
+	open_config_tab: function(event) {
+	    openTab(event, 'Config');
+	    this.update_status();
         }
     }
 })
@@ -195,6 +132,5 @@ function openTab(evt, tabName) {
     evt.currentTarget.className += " active";
 }
 </script>
-	     
 </body>
-</html> 
+</html>

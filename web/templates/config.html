@@ -1,0 +1,105 @@
+(% extends 'base.html' %)
+(% block content %)
+<div id="Config">
+
+  <h3>MQTT Broker Settings</h3>
+  Current MQTT Status: {{ mqtt_status }}</br>
+  URL <input type="text" v-model="mqtt_broker_url"></br>
+  Port Number <input type="text" v-model="mqtt_broker_port_number"></br>
+  Username <input type="text" v-model="mqtt_broker_username"></br>
+  Password <input type="text" v-model="mqtt_broker_password"></br>
+
+  <button v-on:click="update_mqtt_settings">Update MQTT Settings</button></br>
+  
+  <h3>Config</h3>
+    <p>Hotspot SSID: <input type="text" name="hotspot_ssid">
+    <input type="radio" name="hotspot_state" value="on"> On
+    <input type="radio" name="hotspot_state" value="off"> Off</br>
+    Hotspot Passphrase: <input type="password" name="hotspot_passphrase"></br>
+    Note: The hotspot switch must be set to "auto" in order to turn your hotspot off. When the switch is set to "on" then the hotspot will always be on.
+    </p>
+
+    <p>
+    Hostname: <input type="text" name="hostname"></br>
+    </p>
+
+    <p>
+    Wi-Fi SSID: <input type="text" name="wifi_ssid"></br>
+    Passphrase: <input type="text" name="wifi_passphrase"></br>
+    Enter your local network Wi-Fi information here if you wish the fopd to connect to your network. In order to access your fopd from your local network you must use one of Ethernet, fopd Hotspot, or local network Wi-Fi. In order to access the fopd cloud you must use one of Ethernet or network Wi-Fi.
+
+    <p>
+    Raspbian user name: pi</br>
+    Lock Pi account:<input type="checkbox" name="lock_pi_account" value="true">Disables password based access. SSH key based authentication will still work.</br> 
+    Password: <input type="password" name="password"></br>
+    Repeat Password: <input type="password" name="repeat_password"></br>
+    Your public SSH Key: <input type="textarea" name="public_ssh_key"> Set a key to enable SSH key based authentication.
+    </p>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+<script>
+
+
+async function fop_post(url, form_data) {
+  try {
+    const response = await axios.post(url, form_data)
+    if (response.data.r == true) {
+      console.log(url + ' api call successful');
+    }
+    else {
+      console.log(url + ' api called failed');
+    }
+  }
+  catch (error) {
+    console.log('error: ' + url + ' api call failed.');
+  }
+}
+
+function set_mqtt_parameters(parms) {
+  fop_post('/v1/set_mqtt_parameters', parms)
+}
+
+var app = new Vue({
+    el: '#Config',
+    data: {
+      mqtt_status: '',
+      mqtt_broker_url:  "",
+      mqtt_broker_port_number: 8883,
+      mqtt_broker_username: "", 
+      mqtt_broker_password: ""
+    },
+    methods: {
+	update_mqtt_settings: function(event) {
+	    console.log('update mqtt button pressed')
+	    // check the inputs - syntax, semantics, and sanity
+	    // call the API to change the MQTT settings
+            set_mqtt_parameters({mqtt_status: this.mqtt_status, mqtt_broker_url: this.mqtt_broker_url,
+	                         mqtt_broker_port_number: this.mqtt_broker_port_number, 
+		                 mqtt_broker_username: this.mqtt_broker_username, 
+		                 mqtt_broker_password: this.mqtt_broker_password})
+	    // if the API call is successful then 
+	    //     dispay the pop-up asking for a fopd reset
+	    // else
+            //     display a message indicating the the API failure.
+	},
+       show_mqtt_status: function(api_response) {
+	   if (api_response.status == 200) {
+               this.mqtt_status = api_response.data
+           } else {
+	       this.mqtt_status = 'API Error: Cannot read status'
+	   }
+	}
+    },
+    mounted () {
+      axios
+        .get('/v1/mqtt_status')
+        .then(response => this.show_mqtt_status(response))
+  }
+})
+
+</script>
+(% endblock %)
