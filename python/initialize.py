@@ -27,6 +27,7 @@ last completed initialiation command.
 
 {
    "pending_initialization": [
+      {"cmd":"set_wifi_mode", "args":{"mode":"hotspot"}}
       {"cmd":"create_private_key", "args":{"mode":"auto", "reset_after":true}},
       {"cmd":"reset_couchdb_passwords", "args":{"reset_after":false}}
    ]
@@ -44,9 +45,7 @@ def initialize(device_name):
     global fopd_state
 
     logger = getLogger(device_name + '.init')
-    logger.info('############## initializing fopd device  ################')
-
-    global fopd_state
+    #- logger.info('############## initializing fopd device  ################')
 
     state_file_path = path.join(state_directory_location, 'system_state.json')
     logger.info('opening state file: {}'.format(state_file_path))
@@ -96,3 +95,19 @@ def initialize(device_name):
               raise Exception('initialization error')
     else:
         raise Exception('initialization error - no state file found.')
+
+def check_state_file(logger):
+    """ make sure that the state file exists.  If it doesn't exists then create an empty one."""
+
+    try:
+        state_file_path = path.join(state_directory_location, 'system_state.json')
+
+        if not path.isfile(state_file_path):
+            logger.warning('No state file exists.')
+            logger.warning('Creating a state file at {}'.format(state_file_path))
+            with open(state_file_path, 'w') as f:
+                f.write('{"pending_initialization": []}\n')
+    except:
+        msg = 'cannot check state file: {}, {}.'.format(exc_info()[0], exc_info()[1])
+        logger.error(msg)
+        raise Exception('error checking state file')

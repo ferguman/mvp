@@ -22,7 +22,7 @@ def execute_main(args, default_device_name):
     else:
         logger = getLogger(default_device_name)
 
-    logger.info('############## starting farm operation platform device ################')
+    #- logger.info('############## starting farm operation platform device ################')
 
     logger.info('fopd device id: {}'.format(system['device_id']))
 

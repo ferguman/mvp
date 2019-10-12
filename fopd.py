@@ -38,7 +38,7 @@ from python.data_file_paths import configuration_directory_location
 path.append(configuration_directory_location)
 
 from python.args import get_args
-from python.initialize import initialize
+from python.initialize import initialize, check_state_file
 from python.logger import get_top_level_logger
 from python.utilities.main import execute_utility
 from python.main import execute_main
@@ -55,9 +55,15 @@ args = get_args()
 
 # If the user has specifed a utility then run it and then exit.
 if args.utility:
+    logger.info('############## executing fopd utility  ################')
     execute_utility(args, device_name)
     # exit normally
     exit(0)
+
+logger.info('############## initializing fopd device  ################')
+
+# Make sure that a state file exists
+check_state_file(logger)
 
 # Check for initialization items in the system_state file.
 try:
@@ -81,6 +87,7 @@ if not verify_config_file():
 # system checks are successfully done so go ahead and run forever as a 
 # fopd.
 try:
+    logger.info('############## starting farm operation services  ################')
     result = execute_main(args, device_name)
 except:
     # exit with error

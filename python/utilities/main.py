@@ -12,6 +12,7 @@ from python.utilities.reset_couchdb_passwords import reset_couchdb_passwords
 from python.utilities.create_private_key import create_private_key
 from python.utilities.create_system import create_system
 from python.utilities.create_service_file import create_service_file
+from python.utilities.set_wifi_mode import set_wifi_mode
 
 def create_random_uuid():
     """Create a random UUID and print it at the console"""
@@ -37,6 +38,8 @@ def add_utilities(eval_state):
     eval_state['utils']['decrypt'] = decrypt_util
     eval_state['utils']['encrypt'] = encrypt_util
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
+    eval_state['utils']['set_wifi_mode'] = set_wifi_mode 
+
 
 #+ TODO: Create a fopd initiliaation routine that does this ->  
 #        sudo chown -R couchdb:couchdb couchdb
