@@ -28,12 +28,6 @@ from check_python_version import check_python_version
 if not check_python_version():
     exit('wrong python version - cannot run')
 
-# Make sure that you can access the data files (e.g. system_state, logs, etc).
-# Give yourself permissions if you can't access them.
-from python.utilities.set_data_dir_access import set_data_dir_access
-set_data_dir_access()
-exit(1)
-
 #TODO - I think that this path append is to allow the template engine to find the template files
 #       at ./config/template.  If the template engine is abandoned then this
 #       append can go away.

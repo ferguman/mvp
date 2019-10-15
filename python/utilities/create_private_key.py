@@ -23,18 +23,21 @@ def auto_create_private_key_file(args):
 
         pkfp = path.join(configuration_directory_location, 'private_key')
     
-        if path.isfile(pkfp):
+        if path.isfile(pkfp) and not args['over_write'] == True:
+
             logger.error('ERROR: The private key file already exists. Will not overwrite it.')
             return False if args['silent'] else 'ERROR' 
-            #- return 'ERROR'
+
         else:
+
+            if path.isfile(pkfp) and args['over_write'] == True:
+                logger.warning('A private key file exists.  It will be over written.')
      
             with open(pkfp, 'wb') as f:
                 f.write(create_random_key())
                 logger.info('Created a file at {} containing a random key.'.format(pkfp))
 
         return True if args['silent'] else 'OK' 
-        #- return 'OK'
     except:
         logger.error('Exception in auto_create_private_key: {}, {}'.format(exc_info()[0], exc_info()[1]))
         return False
