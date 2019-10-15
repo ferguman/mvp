@@ -28,8 +28,14 @@ def get_top_level_logger(this_devices_name):
    # TODO - Add a way to specify the level from the configuration file.
    logger.setLevel(INFO)
 
+   #- try:
    handler = RotatingFileHandler(path.join(log_directory, 'fopd.log'), maxBytes=10*1000*1000,\
-                                 backupCount=5)
+                                     backupCount=5)
+   """-
+   except:
+       handler = RotatingFileHandler(path.join('./logs/temp_fopd.log'), maxBytes=10*1000*1000,\
+                                     backupCount=5)
+   """
 
    formatter = Formatter(fmt='%(asctime)s %(levelname)s %(name)s:%(message)s', 
                              datefmt='%Y-%m-%d %I:%M:%S %p %Z')
