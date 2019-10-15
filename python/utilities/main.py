@@ -40,7 +40,6 @@ def add_utilities(eval_state):
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
     eval_state['utils']['set_wifi_mode'] = set_wifi_mode 
 
-
 #+ TODO: Create a fopd initiliaation routine that does this ->  
 #        sudo chown -R couchdb:couchdb couchdb
 #        sudo usermod -a -G couchdb pi

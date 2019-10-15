@@ -86,7 +86,7 @@ def initialize(device_name):
               # write the fopd state with completed initializations removed.
               f.truncate(0)
               f.seek(0)
-              dump(fopd_state, f)
+              dump(fopd_state, f, indent=3)
 
               return True 
            except:
