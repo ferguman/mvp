@@ -174,7 +174,7 @@ def start(app_state, args, b):
         # Delete old pictures every morning at 9 am local time.
         if 'delete_args' in args:
             try:
-                if this_instant.hour == 12:
+                if this_instant.hour == 9:
                     if not state['daily_archive_has_run']:
                         logger.info('will delete pictures older than {} days'.format(args['delete_args']['max_day_age']))
                         run('find /data/fopd/pictures -name "*.*" -type f -mtime {} -exec rm -f {{}} \;'.format(
