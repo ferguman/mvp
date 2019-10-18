@@ -11,8 +11,10 @@ from threading import Lock
 from python.data_file_paths import camera_image_directory
 from python.camera_subscribers.make_subscriber import get_camera_subscribers
 from python.logger import get_sub_logger 
+from python.LogFileEntryTable import LogFileEntryTable
 
 logger = get_sub_logger(__name__)
+log_entry_table = LogFileEntryTable(60*60)
 
 camera_lock = Lock()
 
@@ -130,21 +132,12 @@ def make_show_subs(camera_subscribers):
     return show_subs
 
 
-""" - 
-def make_update(app_state, config_args):
-
-    def update(sub):
-        return 'Hello: {}'.format(sub)
-
-    return update
-"""
-
 def start(app_state, args, b):
 
     logger.setLevel(args['log_level'])
     logger.info('Starting camera controller.')
 
-    state = {'startup':True}
+    state = {'startup':True, 'daily_archive_has_run':False}
    
     camera_subscribers = get_camera_subscribers(args['subscribers'])
 
@@ -177,12 +170,22 @@ def start(app_state, args, b):
             #+ elif s.wants_periodic_calls:
             #+    s.periodic_call()
 
-        # TODO - put in code to delete any picture files that were created. Keep in mind that this assumes that 
-        #        the s's above don't return from the new_picture method till they are done with the file.  A 
-        #        more sophisticated garbage collection scheme is required if the listeners need the file
-        #        for the an arbitrary amount of time after the new_picture method returns.  One way maybe is to
-        #        to create a queue for each listener and to not delete files that are still in one of the queues.
-      
+        # NOTE syntax of delete info in config file ->  'delete_args':{'max_day_age': 2},
+        # Delete old pictures every morning at 9 am local time.
+        if 'delete_args' in args:
+            try:
+                if this_instant.hour == 12:
+                    if not state['daily_archive_has_run']:
+                        logger.info('will delete pictures older than {} days'.format(args['delete_args']['max_day_age']))
+                        run('find /data/fopd/pictures -name "*.*" -type f -mtime {} -exec rm -f {{}} \;'.format(
+                            args['delete_args']['max_day_age']), shell=True)
+                        state['daily_archive_has_run'] = True
+                else:
+                    state['daily_archive_has_run'] = False 
+            except:
+                log_entry_table.add_log_entry(logger.error, 
+                    'camera exception while deleting old pictures: {}, {}'.format(exc_info()[0], exc_info()[1]))
+
         state['startup'] = False
         sleep(1)  
 

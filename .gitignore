@@ -22,3 +22,5 @@ state/*.*
 state/*
 !state/.gitkeep
 fopd/
+/web/static/*.svg
+/web/static/image.jpg

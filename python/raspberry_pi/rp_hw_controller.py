@@ -69,12 +69,13 @@ def update_i2c_sensor_readings(sensors: list):
             s.update_sensor_readings()
 
 
-def update_control_outputs(controls):
+#- def update_control_outputs(controls):
+def update_control_outputs(controls, state):
     """Set the Raspberry PI control pins as per the current control state """
     
     for c in controls:
         if c['config']['type'] == 'digital_pin':
-            if ('camera_pose' in controls and controls['camera_pose']['state']) and\
+            if ('camera_pose' in state and state['camera_pose']) and\
                ('camera_pose' in c['config'] and c['config']['camera_pose'] == 'on'):
                 set_gpio_pin('on', c['config']['active_high'], c['config']['pin_num'])
             else:
@@ -109,6 +110,7 @@ def make_controls(control_configs: list, controls: list):
     #       and that there are no bogus config settings.
     #TODO - currenlty we only accomadate digital_pins
     for c in control_configs:
+
         if c['type'].lower() == 'digital_pin':
             
             controls.append({'state':c['default'].lower(), 'config':c})
@@ -119,10 +121,8 @@ def make_controls(control_configs: list, controls: list):
 
         elif c['type'].lower() == 'boolean':
             controls.append({'state':c['default'], 'config':c})
-
         else:
             logger.error('Control type {} is not supported'.format(c['type']))
-
 
 
 def make_help(args):
@@ -148,11 +148,6 @@ def make_help(args):
 
     return help
 
-"""-
-def get(value_name):
-
-    return 'OK'
-"""
 
 def get_control(name: str, controls: list):
 
@@ -162,8 +157,7 @@ def get_control(name: str, controls: list):
 
     return None
 
-#- def make_cmd(controls: list, control_configs: dict):
-def make_cmd(controls: list):
+def make_cmd(controls: list, state: dict):
 
     def cmd(*args): 
 
@@ -171,6 +165,7 @@ def make_cmd(controls: list):
 
         # is this a show_target command
         if cmd == 'show_targets' or cmd == 'st':
+            # Show the controls as a comma seperated list on one line.
             s  = None
             for c in controls:
                 if s == None:
@@ -220,22 +215,22 @@ def make_cmd(controls: list):
                 logger.error('Unknown on/off command action received: {}'.format(args[1]))
                 return 'unknown target.'
 
-        """ -
-        # is this an on or off command?
+        # is this a camera pose command. 
         elif cmd == 'camera_pose' or cmd == 'cp':
 
             if args[1] == 'on':
-                control_state['camera_pose'] = True 
+                #- control_state['camera_pose'] = True 
+                state['camera_pose'] = True 
                 logger.info('posing for a picture')
                 return 'OK'
             elif args[1] == 'off':
-                control_state['camera_pose'] = False
+                #- control_state['camera_pose'] = False
+                state['camera_pose'] = False
                 logger.info('will stop posing for a picture')
                 return 'OK'
             else:
                 logger.error('Unknown pose command action {}'.format(args[1]))
                 return 'Unknown pose command action {}'.format(args[1])
-        """
 
         logger.error('unknown command received: {}'.format(cmd))
         return "unknown cmd. Specify 'on' or 'off'"
@@ -244,12 +239,12 @@ def make_cmd(controls: list):
 
 #- def make_show_state(overrides: dict, values: list, commands: list):
 #- data_values and controls
-def make_show_state(data_values: list, controls: list):
+def make_show_state(data_values: list, controls: list, state: dict):
 
     def show_state():
 
-        # s = 'Camera Pose is {}.\n'.format('on' if overrides['camera_pose'] else 'off')
-        s = ''
+        s = 'Camera Pose is {}.\n'.format('on' if state['camera_pose'] else 'off')
+        #- s = ''
 
         for v in data_values:
             s = s + '{} = {} ({}).\n'.format(v['value_name'], v['value'], v['units'])
@@ -271,9 +266,9 @@ def start(app_state, args, b):
     # These are variables hold the state of the controller: control configurations - currently
     # just camera pose, values - the current sensor readings, controls - the state and configuration
     # of each control point.
-    # control_state = {'camera_pose':False}
     # sensor_readings = []
     # vals = []
+    state = {'camera_pose':False}
     controls = []
     data_values = []
 
@@ -281,7 +276,8 @@ def start(app_state, args, b):
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
     #- app_state[args['name']]['state'] = make_show_state(control_state, data_values, controls)
-    app_state[args['name']]['state'] = make_show_state(data_values, controls)
+    #- app_state[args['name']]['state'] = make_show_state(data_values, controls)
+    app_state[args['name']]['state'] = make_show_state(data_values, controls, state)
     app_state[args['name']]['sensor_readings'] = data_values
     #- app_state[args['name']]['get'] = make_get(vals)
     app_state[args['name']]['get'] = make_get(data_values)
@@ -300,7 +296,8 @@ def start(app_state, args, b):
     #- make_data_values(args['data_values'], data_values)
 
     #- app_state[args['name']]['cmd'] = make_cmd(controls, control_state)
-    app_state[args['name']]['cmd'] = make_cmd(controls)
+    #- app_state[args['name']]['cmd'] = make_cmd(controls)
+    app_state[args['name']]['cmd'] = make_cmd(controls, state)
 
     # Let the system know that you are good to go.
     b.wait()
@@ -308,7 +305,7 @@ def start(app_state, args, b):
     while not app_state['stop']:
      
         # Update outputs 
-        update_control_outputs(controls)
+        update_control_outputs(controls, state)
 
         # Read the i2c sensors
         update_i2c_sensor_readings(i2c_sensors) 

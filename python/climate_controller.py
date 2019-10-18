@@ -860,11 +860,6 @@ def start(app_state, args, barrier):
     # Load current state and recipe
     init_state(args)
 
-    """-
-    # Don't proceed until all the other resources are available.
-    barrier.wait()    
-    """
-
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
 

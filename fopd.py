@@ -56,7 +56,8 @@ args = get_args()
 # If the user has specifed a utility then run it and then exit.
 if args.utility:
     logger.info('############## executing fopd utility  ################')
-    execute_utility(args, device_name)
+    #- execute_utility(args, device_name)
+    execute_utility(args)
     # exit normally
     exit(0)
 
