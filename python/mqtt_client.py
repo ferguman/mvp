@@ -64,10 +64,11 @@ def make_on_message(app_state, publish_queue):
 
 
 def on_publish(mqttc, obj, mid):
-   global status
+
+   #- global status
 
    logger.debug('MQTT message published, mid={}'.format(mid))
-   status['connected'] = False
+   #- status['connected'] = False
 
 def on_subscribe(mqtt, userdata, mid, granted_qos):
 
@@ -136,8 +137,9 @@ def rc_text(rc):
 
 def make_mqtt_status_cmd():
 
+    global connection_rc, connection_flags
+
     def mqtt_status():
-        global connection_rc, connection_flags
         return('connection code: {}, connection_flags: {}'.format(rc_text(connection_rc), connection_flags))
 
     return mqtt_status
