@@ -420,6 +420,7 @@ def start(app_state, args, b):
     app_state[args['name']]['cmd'] = make_cmd(mc_state, ser)
     app_state[args['name']]['mc_cmd'] = make_mc_cmd(ser)
     app_state[args['name']]['state'] = show_state
+    logger.info('############# making mc state')
    
     vals = app_state[args['name']]['sensor_readings'] = args['sensor_readings'] 
     app_state[args['name']]['get'] = make_get(args['sensor_readings'], args['sensor_reading_names'])
