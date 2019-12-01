@@ -1,18 +1,14 @@
 from logging import getLogger
-#- from os import path
 from uuid import uuid4
-#- from sys import exc_info
 
-#- from python.data_file_paths import couchdb_local_config_file_directory, configuration_directory_location
-#- from python.random_password import generate_password
 from python.encryption.nacl_fop import decrypt, encrypt
-#- from python.logger import get_sub_logger 
 from python.repl import start
 from python.utilities.reset_couchdb_passwords import reset_couchdb_passwords
 from python.utilities.create_private_key import create_private_key
 from python.utilities.create_system import create_system
 from python.utilities.create_service_file import create_service_file
 from python.utilities.set_wifi_mode import set_wifi_mode
+from python.utilities.resize_filesystem import resize_filesystem
 
 def create_random_uuid():
     """Create a random UUID and print it at the console"""
@@ -39,8 +35,10 @@ def add_utilities(eval_state):
     eval_state['utils']['encrypt'] = encrypt_util
     eval_state['utils']['reset_couchdb_passwords'] = reset_couchdb_passwords
     eval_state['utils']['set_wifi_mode'] = set_wifi_mode 
+    eval_state['utils']['resize_filesystem'] = resize_filesystem
 
 #+ TODO: Create a fopd initiliaation routine that does this ->  
+#        Actually this should be done by mender image postprocessing.
 #        sudo chown -R couchdb:couchdb couchdb
 #        sudo usermod -a -G couchdb pi
 #        sudo chmod /fopd/couchdb/etc 775
@@ -48,7 +46,6 @@ def add_utilities(eval_state):
 #
 def execute_utility(cmd, arg_source='namespace', device_name='fopd'):
 
-    #- logger = get_top_level_logger('fopd')
     logger = getLogger(device_name + '.' + 'utility')
 
     # The reple will see stop = True and exit normally after it processess the start_cmd.
@@ -73,7 +70,6 @@ def execute_utility(cmd, arg_source='namespace', device_name='fopd'):
           start(eval_state, cmd.silent, None, start_cmd='utils.' + cmd.utility +'()')
     elif arg_source == 'dictionary':
         return start(eval_state, cmd['args']['silent'], None, start_cmd='utils.' + cmd['cmd'] + '({})'.format(cmd['args']))
-        #- return True
     else:
         raise Exception('error, unknown arg_source')
 

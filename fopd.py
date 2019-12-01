@@ -88,7 +88,7 @@ if not verify_config_file():
 # system checks are successfully done so go ahead and run forever as a 
 # fopd.
 try:
-    logger.info('############## starting farm operation services  ################')
+    logger.info('############## starting fopd device ################')
     result = execute_main(args, device_name)
 except:
     # exit with error

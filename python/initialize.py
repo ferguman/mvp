@@ -45,7 +45,6 @@ def initialize(device_name):
     global fopd_state
 
     logger = getLogger(device_name + '.init')
-    #- logger.info('############## initializing fopd device  ################')
 
     state_file_path = path.join(state_directory_location, 'system_state.json')
     logger.info('opening state file: {}'.format(state_file_path))
@@ -90,7 +89,7 @@ def initialize(device_name):
 
               return True 
            except:
-              msg = 'cannot load and parse state file {}, {}, {}.'.format(state_file_path, exc_info()[0], exc_info()[1])
+              msg = 'cannot process the state file {}, {}, {}.'.format(state_file_path, exc_info()[0], exc_info()[1])
               logger.error(msg)
               raise Exception('initialization error')
     else:
