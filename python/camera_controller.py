@@ -35,11 +35,15 @@ def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fo
         #TODO: A client had issues with the camera images having dark bands. We think this is because
         #      the lights they were using are flickering at 60 HZ. The follwing fswebcam command reduces
         #      the banding considerably.
-        #      camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp --fps 60 --frames 60 "%d-%m-%Y %H:%M:%S (%Z)"'\
+        #      camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp --fps 60 --frames 60'\
+        #                           + ' --verbose  --save {}'.format(file_location)
+        #
         #      So add a configuration option to set multiframe captures at 50 and 60 hz or better yet allow the fswebcam options
         #      to be piped in dircetly from the configuration file.
+        #
         camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp "%d-%m-%Y %H:%M:%S (%Z)"'\
-                              + ' --verbose  --save {}'.format(file_location)
+                             + ' --verbose  --save {}'.format(file_location)
+
         logger.debug('Preparing to run shell command: {}'.format(camera_shell_command))
 
         try:
