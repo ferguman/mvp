@@ -16,7 +16,10 @@ import re
 import RPi.GPIO as GPIO
 
 from python.logger import get_sub_logger 
+from python.LogFileEntryTable import LogFileEntryTable
+
 logger = get_sub_logger(__name__)
+log_entry_table = LogFileEntryTable(60*60)
 
 def make_get(vals):
 
@@ -31,8 +34,8 @@ def make_get(vals):
     return get
 
 
-
 def make_sensor_list(args, sensor_readings):
+
     """ Create a sensor class for each i2c sensor listed in the i2c_bus list.
         Return a list containing all the classes.
         Note that each sensor class adds 0, 1, or more sensor reading values 
@@ -48,7 +51,8 @@ def make_sensor_list(args, sensor_readings):
             # Instantiate and build all sensors.
             module = __import__('python.{}'.format(s['sensor_module']), fromlist=[s['sensor_name']])
             class_ = getattr(module, s['sensor_name'])
-            sensors.append(class_(s, sensor_readings))
+            #- sensors.append(class_(s, sensor_readings))
+            sensors.append({'online':False, 'sensor':class_(s, sensor_readings)})
 
     return sensors
 
@@ -66,10 +70,15 @@ def update_i2c_sensor_readings(sensors: list):
 
     with i2c_lock:
         for s in sensors:
-            s.update_sensor_readings()
+            #- s.update_sensor_readings()
+            if s['online']:
+                s['sensor'].update_sensor_readings()
+            else:
+                #- logger.error('sensor {} is off line'.format(s['sensor']))
+                log_entry_table.add_log_entry(logger.error, 
+                    'sensor {} is off line'.format(s['sensor'])) 
 
 
-#- def update_control_outputs(controls):
 def update_control_outputs(controls, state):
     """Set the Raspberry PI control pins as per the current control state """
     
@@ -263,7 +272,7 @@ def start(app_state, args, b):
     logger.setLevel(args['log_level'])
     logger.info('Raspberry Pi hardware interface thread starting.')
 
-    # These are variables hold the state of the controller: control configurations - currently
+    # These are variables which hold the state of the controller: control configurations - currently
     # just camera pose, values - the current sensor readings, controls - the state and configuration
     # of each control point.
     # sensor_readings = []
@@ -275,28 +284,22 @@ def start(app_state, args, b):
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    #- app_state[args['name']]['state'] = make_show_state(control_state, data_values, controls)
-    #- app_state[args['name']]['state'] = make_show_state(data_values, controls)
     app_state[args['name']]['state'] = make_show_state(data_values, controls, state)
     app_state[args['name']]['sensor_readings'] = data_values
-    #- app_state[args['name']]['get'] = make_get(vals)
     app_state[args['name']]['get'] = make_get(data_values)
    
     # Initialize the i2c sensors.
     # TODO: Currently this controller only supports i2c sensors but hopefully, one-wire, and other
     #       types of sensors can be added gracefully.
-    #- i2c_sensors = make_sensor_list(args, vals)
-    #- i2c_sensors = make_sensor_list(args, sensor_readings)
     i2c_sensors = make_sensor_list(args, data_values)
+    for s in i2c_sensors:
+        s['online'] = s['sensor'].initialize()
 
     # Setup the GPIO based inputs and outputs
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BOARD)
     make_controls(args['controls'], controls)
-    #- make_data_values(args['data_values'], data_values)
 
-    #- app_state[args['name']]['cmd'] = make_cmd(controls, control_state)
-    #- app_state[args['name']]['cmd'] = make_cmd(controls)
     app_state[args['name']]['cmd'] = make_cmd(controls, state)
 
     # Let the system know that you are good to go.
