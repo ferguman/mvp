@@ -51,7 +51,7 @@ def get_chart_data(couchdb_url, chart_info, logger):
                      + 'startkey=["{0}","{1}",{2}]&endkey=["{0}"]&descending=true&limit=60'.format(
                      chart_info['attribute'], chart_info['couchdb_name'], '{}')
                      
-    logger.debug('prepared couchdb query: {}'.format(couch_query))
+    logger.info('prepared couchdb query: {}'.format(couch_query))
     
     try:
         r = requests.get(couch_query,
