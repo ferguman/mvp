@@ -333,7 +333,9 @@ def get_current_recipe_step_values(step_name, value_names):
                 if isinstance(t['start_time'], (int, float)):
                     start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
                 else:
-                    start = t['start_time'].split(':')
+                    #- start = t['start_time'].split(':')
+                    start_time = datetime.datetime.strptime(t['start_time'], '%H:%M').time()
+                    start = [start_time.hour, start_time.minute] 
 
                 if start[0] <= climate_state['cur_hour']: 
                     if len(start) > 1:
@@ -347,7 +349,9 @@ def get_current_recipe_step_values(step_name, value_names):
                 if isinstance(t['end_time'], (int, float)):
                     end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
                 else:
-                    end = t['end_time'].split(':')
+                    #- end = t['end_time'].split(':')
+                    end_time= datetime.datetime.strptime(t['end_time'], '%H:%M').time()
+                    end = [end_time.hour, end_time.minute] 
                 
                 if len(end) == 1:
                     if end[0] >= climate_state['cur_hour']: 
@@ -760,7 +764,8 @@ def get_phase_index(cur_day_index, phases):
             else:
                 rcp_day_index = rcp_day_index + rcp_phase_cycles
 
-        logger.error('the current recipe does not apply to today. It may be over.')
+        #- logger.error('the current recipe does not apply to today. It may be over.')
+        log_entry_table.add_log_entry(logger.error, 'the current recipe does not apply to today. It may be over.') 
         return None
 
     except:
@@ -866,6 +871,7 @@ def start(app_state, args, barrier):
     # by convention we expect a standard fopd hardware interface to exist.
     hw_int = app_state[args['hardware_interface']]
 
+    # TODO - refactor to create the control loops before the barrier wait
     control_loops = create_control_loops(args['controls'], app_state) 
 
 
