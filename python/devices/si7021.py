@@ -4,78 +4,54 @@ import smbus2
 from sys import exc_info
 from time import sleep, time
 
+from python.devices.I2c_slave import I2c_slave
 from python.logger import get_sub_logger 
 
-address = 0x40
+# Use the default address if none is supplied via the configuration
+default_i2c_address = 0x40
+
 rh_no_hold = 0xf5
 previous_temp = 0xe0
 
 logger = get_sub_logger(__name__)
 
-class si7021(object):
+#- class si7021(object):
+class si7021(I2c_slave):
 
-    def __init__(self, config: dict, vals: list):
-        self.bus = smbus2.SMBus(1)
-        self.config = config
+    def initialize(self) -> bool:
 
-        self.init_sensor_value_list(vals)
+        logger.info('initializing si7021 sensor (air temperature and humidity)') 
+
+        if not self.i2c_addr:
+            self.i2c_addr = default_i2c_address
+            logger.warning('No i2c address was supplied by the system. Will use {} (hex), {} (decimal)'.format(hex(default_i2c_address), default_i2c_address))
+        else:
+            logger.info('i2c address configured to {} (hex), {} (decimal)'.format(hex(self.i2c_addr), self.i2c_addr))
 
         # Store the time of occurence and error count for each type of error that has the potential to flood
         # the log file. 
         humidity_read_error_id = 0
         temp_read_error_id = 1
 
-        logger.info('i2c sensor si7021. Providing air temperature and humidity. Will use i2c addr {}'.format(address)) 
-
-    def init_sensor_value_list(self, vals: list):
-
-       """ vals is the master list of sensor readings.  It may contain readings 
-           from sensors other than this one.  Tack this sensor's readings onto the list
-           and remember where in the list the readings are at. """
-      
-       self.vals = vals
-       self.humidity_val_index = None
-       self.temperature_val_index = None
-
-       for a in self.config['attributes']:
-
-           self.vals.append(
-               {'value_name':a['value_name'], 'type':'environment', 'device_name':self.config['device_name'], 
-                'device_id':self.config['device_id'],
-                'subject':a['subject'], 'subject_location_id':a['subject_location_id'], 
-                'attribute':a['attribute'], 'value':None, 'units':a['units'], 'ts':None})
-
-           if a['attribute'].lower() == 'humidity':
-               self.humidity_val_index = len(vals) - 1
-           elif a['attribute'].lower() == 'temperature':
-               self.temperature_val_index = len(vals) - 1 
-           else:
-               logger.error('si7021: uknown attribute {}'.format(a['attribute']))
-
-       if self.humidity_val_index == None or self.temperature_val_index == None:
-           logger.error('si7021: You must specify humidity and temperature attributes for this device.')
+        return True 
 
     def update_sensor_readings(self, take_readings=False):
 
            ts = time()
-
+               
            h = self.getHumidity()
-           if h:
-               #- self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(self.getHumidity())
-               self.vals[self.humidity_val_index]['value'] = '{:+.1f}'.format(h)
-           else:
-               self.vals[self.humidity_val_index]['value'] = None
- 
-           self.vals[self.humidity_val_index]['ts'] = ts 
-
            t = self.getTempC()
-           if t:
-               self.vals[self.temperature_val_index]['value'] = '{:+.1f}'.format(t)
-           else:
-               self.vals[self.temperature_val_index]['value'] = None
 
-           self.vals[self.temperature_val_index]['ts'] = ts 
-
+           for k,v in self.attribute_value_indexes.items():
+               if k == 'humidity':
+                   self.vals[v]['value'] = '{:+.1f}'.format(h)
+                   self.vals[v]['ts'] = ts 
+               elif k == 'temperature':
+                   self.vals[v]['value'] = '{:+.1f}'.format(t)
+                   self.vals[v]['ts'] = ts 
+               else:
+                   logger.error('unknown attribute value {}, check the configuration'.format(k))
+               
 
     def read_word(self):
         """
@@ -93,7 +69,7 @@ class si7021(object):
         return (msb*256) + lsb
 
     def write(self, command):
-        self.bus.write_byte(address, command)
+        self.bus.write_byte(self.i2c_addr, command)
 
     def getHumidity(self):
         try: 
@@ -131,8 +107,3 @@ class si7021(object):
         print('\n*** Test SI7021 ***\n')
         print('Temp C: %.2f F' %self.getTempC())
         print('Humidity : %.2f %%' %self.getHumidity())
-
-if __name__=="__main__":
-    t=si7021()
-    t.test()
-    

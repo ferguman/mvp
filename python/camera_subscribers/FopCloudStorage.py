@@ -5,7 +5,6 @@ from python.file_uploader import upload_camera_image
 #
 class FopCloudStorage(CameraSubscriber):
 
-    
     # upload each new image to the cloud
     def new_picture(self, file_location):
 

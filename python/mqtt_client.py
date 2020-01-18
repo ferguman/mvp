@@ -1,3 +1,6 @@
+# Note: PJON is an open source network protocol for IoT communication that could be
+#       an alternative for MQTT. See https://github.com/gioblu/PJON
+
 from datetime import datetime
 from queue import Queue, Empty
 from subprocess import * 
