@@ -2,6 +2,7 @@
 *.swp
 *.log
 *.svg
+60
 __pycache__/
 climate_recipes/*.*
 climate_recipes/*
