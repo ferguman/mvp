@@ -331,40 +331,44 @@ def get_current_recipe_step_values(step_name, value_names, log_missing_entries=T
                 lte_end = False
                
                 # accept times as either integers, floats (i.e the hour) or strings (e.g. hh:mm)
-                if isinstance(t['start_time'], (int, float)):
+                if isinstance(t['start_time'], (int)):
+                    start = [int(t['start_time']), 0]
+                elif isinstance(t['start_time'], (float)):
                     start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
                 else:
                     start_time = datetime.datetime.strptime(t['start_time'], '%H:%M').time()
                     start = [start_time.hour, start_time.minute] 
 
                 if start[0] <= climate_state['cur_hour']: 
-                    if len(start) > 1:
-                        if start[1] <= climate_state['cur_min']:
-                            past_start = True
-                        else:
-                            past_start = False
+                    #- if len(start) > 1:
+                    if start[1] <= climate_state['cur_min']:
+                        past_start = True
                     else:
+                        past_start = False
+                    #- else:
                         past_start = True 
 
-                if isinstance(t['end_time'], (int, float)):
+                if isinstance(t['end_time'], (int)):
+                    end = [int(t['end_time']), 59]
+                elif isinstance(t['end_time'], (float)):
                     end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
                 else:
                     end_time = datetime.datetime.strptime(t['end_time'], '%H:%M').time()
                     end = [end_time.hour, end_time.minute] 
                 
-                if len(end) == 1:
-                    if end[0] >= climate_state['cur_hour']: 
+                #- if len(end) == 1:
+                #-    if end[0] >= climate_state['cur_hour']: 
+                #-        lte_end = True
+                #-    else:
+                #-        lte_end = False
+                #- else:
+                if (end[0] > climate_state['cur_hour']) or\
+                   (end[0] == climate_state['cur_hour'] and end[1] >= climate_state['cur_min']):
                         lte_end = True
-                    else:
-                        lte_end = False
                 else:
-                    if (end[0] > climate_state['cur_hour']) or\
-                       (end[0] == climate_state['cur_hour'] and end[1] >= climate_state['cur_min']):
-                            lte_end = True
-                    else:
-                        lte_end = False 
+                    lte_end = False 
                 
-                #d logger.info('step name: {}, start: {}, end: {}, past_start: {}, lte_end: {}'.format(step_name, start, end, past_start, lte_end))
+                # DEBUG logger.info('step name: {}, start: {}, end: {}, past_start: {}, lte_end: {}'.format(step_name, start, end, past_start, lte_end))
                 #- if len(end) > 0:
                 #-     logger.info('gte_start {}, lte_end {}'.format(past_start, lte_end))
                 if past_start and lte_end:
