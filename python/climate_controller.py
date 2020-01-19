@@ -126,7 +126,8 @@ def show_recipe():
     global climate_state
 
     if climate_state['recipe'] != None:
-        return dumps(climate_state['recipe'])
+        #- return dumps(climate_state['recipe'])
+        return dumps(climate_state['recipe'], indent=3)
     else:
         return None 
 
@@ -312,7 +313,7 @@ def init_state(args):
 # step_name -> e.g. light_intensity, air_fush
 # value names -> tuple list of value names to return
 #
-def get_current_recipe_step_values(step_name, value_names):
+def get_current_recipe_step_values(step_name, value_names, log_missing_entries=True):
 
     global climate_state
 
@@ -333,7 +334,6 @@ def get_current_recipe_step_values(step_name, value_names):
                 if isinstance(t['start_time'], (int, float)):
                     start = [int(t['start_time']), int((t['start_time'] - int(t['start_time'])) * 60)]
                 else:
-                    #- start = t['start_time'].split(':')
                     start_time = datetime.datetime.strptime(t['start_time'], '%H:%M').time()
                     start = [start_time.hour, start_time.minute] 
 
@@ -349,8 +349,7 @@ def get_current_recipe_step_values(step_name, value_names):
                 if isinstance(t['end_time'], (int, float)):
                     end = [int(t['end_time']), int((t['end_time'] - int(t['end_time'])) * 60)]
                 else:
-                    #- end = t['end_time'].split(':')
-                    end_time= datetime.datetime.strptime(t['end_time'], '%H:%M').time()
+                    end_time = datetime.datetime.strptime(t['end_time'], '%H:%M').time()
                     end = [end_time.hour, end_time.minute] 
                 
                 if len(end) == 1:
@@ -359,14 +358,15 @@ def get_current_recipe_step_values(step_name, value_names):
                     else:
                         lte_end = False
                 else:
-                    if (end[0] >= climate_state['cur_hour']) or\
+                    if (end[0] > climate_state['cur_hour']) or\
                        (end[0] == climate_state['cur_hour'] and end[1] >= climate_state['cur_min']):
                             lte_end = True
                     else:
                         lte_end = False 
                 
                 #d logger.info('step name: {}, start: {}, end: {}, past_start: {}, lte_end: {}'.format(step_name, start, end, past_start, lte_end))
-
+                #- if len(end) > 0:
+                #-     logger.info('gte_start {}, lte_end {}'.format(past_start, lte_end))
                 if past_start and lte_end:
 
                     values = {}
@@ -374,17 +374,34 @@ def get_current_recipe_step_values(step_name, value_names):
                     for vn in value_names:
                         if vn in t:
                             values[vn] = t[vn]
+                        elif vn == "units":
+                            # Unit's is an optional attribute, default it to minutes.
+                            values["units"] = "minutes" 
+                        #- else:
+                        #-    logger.warning('cannot find value {} in step {}.'.format(vn, step_name))
                         else:
-                            logger.warning('cannot find value {} in step {}.'.format(vn, step_name))
+                            # An expected recipe value is missing. So do not return anything
+                            if log_missing_entries:
+                                log_entry_table.add_log_entry(logger.warning, 'cannot find value {} in step {}.'.format(vn, step_name)) 
+                            return None
 
-                    # You've found the step that cooresponds to the current timeso now exit.
+                    # You've found the step that cooresponds to the current time so now exit.
                     return values
-
+            
+            # If the code has gotten this far then there were no time intervals in the step that match the current time. 
+            if log_missing_entries:
+                log_entry_table.add_log_entry(logger.warning,
+                    'There is no time interval for step {} for the time {}:{}'.format(step_name, climate_state['cur_hour'], climate_state['cur_min'])) 
+            return None
 
         else:
-            if climate_state['log_cycle']:
-                log_entry_table.add_log_entry(logger.error, 
-                    'There are no recipe steps for: {}.  Why?'.format(step_name)) 
+            # There are no times defined in the recipe step 
+            if log_missing_entries:
+                log_entry_table.add_log_entry(logger.error, 'There are no recipe times for the  step named: {}.  Why?'.format(step_name)) 
+            return None
+            #- if climate_state['log_cycle']:
+            #-     log_entry_table.add_log_entry(logger.error, 
+            #-        'There are no recipe steps for: {}.  Why?'.format(step_name)) 
 
     except:
         log_entry_table.add_log_entry(logger.error, 
@@ -395,46 +412,67 @@ def get_current_recipe_step_values(step_name, value_names):
 def check_lights(controller):
 
     global climate_state
-    
-    value = get_current_recipe_step_values('light_intensity', ('value',))
+  
+    #TODO - units is an optional step value.  log_missing_entries won't log the non-presence of units. This is confusing. Is there
+    #       a way to clean up the code to make optional step values more apparent.
+    if get_current_recipe_step_values('light_intensity', ('interval', 'duration', 'units'), log_missing_entries = False):
 
-    light_on = None
-
-    if value != None:
-        if value['value']  == 1:
-            if not climate_state['grow_light_on']: 
-                light_on = True
-        else:
-            if climate_state['grow_light_on']:
-                light_on = False 
+        # There is a interval timer for the lights so use it.
+        recipe_interval = run_interval_loop('light_intensity', climate_state['grow_light_on'], climate_state['grow_light_last_on_time']) 
+        light_on = recipe_interval['turn_on'] 
     else:
-        if climate_state['grow_light_on']:
+
+        # There is no interval timer for the lights so look for a duration time in the recipe. 
+        value = get_current_recipe_step_values('light_intensity', ('value',))
+
+        # light_on = None
+        light_on = False 
+
+        if value != None:
+            if 'value' in value.keys() and value['value']  == 1:
+                #- if not climate_state['grow_light_on']: 
+                light_on = True
+            else:
+                #- if climate_state['grow_light_on']:
+                light_on = False 
+        else:
+            #- if climate_state['grow_light_on']:
             light_on = False 
 
-    if light_on != None:
-        if light_on:
-            climate_state['grow_light_on'] = True
-            climate_state['grow_light_last_on_time'] = climate_state['cur_time'] 
-            controller['cmd']('on', 'grow_light') 
-        else:
-            climate_state['grow_light_on'] = False 
-            climate_state['grow_light_last_off_time'] = climate_state['cur_time']
-            controller['cmd']('off', 'grow_light')
+    # Update the light controller to the current light on/off state
+    #- if light_on != None:
+    if light_on and not climate_state['grow_light_on']:
+        climate_state['grow_light_on'] = True
+        climate_state['grow_light_last_on_time'] = climate_state['cur_time'] 
+        controller['cmd']('on', 'grow_light') 
+    elif not light_on and climate_state['grow_light_on']:
+        climate_state['grow_light_on'] = False 
+        climate_state['grow_light_last_off_time'] = climate_state['cur_time']
+        controller['cmd']('off', 'grow_light')
 
 
 def run_interval_loop(loop_name, curr_on_state, last_on_time):
 
     global climate_state
 
-    values = get_current_recipe_step_values(loop_name, ('interval', 'duration'))
+    values = get_current_recipe_step_values(loop_name, ('interval', 'duration', 'units'))
     turn_on = None
 
+    if values['units'] == 'seconds':
+        duration = values['duration']
+        interval = values['interval']
+    else:
+        duration = 60 * values['duration']
+        interval = 60 * values['interval']
+
     if values != None and last_on_time != None:
+        #- logger.info('curr_on_state {}, cur_time {}, last_on_time {}, duration {}, interval {}'.format(curr_on_state, climate_state['cur_time'],
+        #-    last_on_time, values['duration'], values['interval']))
         if curr_on_state and\
-           climate_state['cur_time'] - last_on_time > 60 * values['duration']:
+           climate_state['cur_time'] - last_on_time > duration:
             turn_on = False
         elif not curr_on_state and\
-               climate_state['cur_time'] - last_on_time > 60 * values['interval']:
+             climate_state['cur_time'] - last_on_time > interval:
             turn_on = True
         else:
             # Waiting for next transition to on or off so leave the actuator in it's current state.
@@ -450,7 +488,8 @@ def run_interval_loop(loop_name, curr_on_state, last_on_time):
     if turn_on == None:
         logger.error('{} recipe error. No action could be determined.'.format(loop_name))
 
-    return {'turn_on':turn_on, 'interval':values['interval'], 'duration':values['duration']}
+    return {'turn_on':turn_on, 'interval':interval, 'duration':duration}
+
 
 flood_sequence_state = {'cmd_index':None, 'cmd_start_time':None, 'cmd_duration':None, 'recipe_duration':None}
 
@@ -472,7 +511,6 @@ def run_flood_loop(controllers, args):
 
     recipe_interval = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
     on = recipe_interval['turn_on'] 
-    #- on = run_interval_loop('flood', climate_state['flood_on'], climate_state['flood_last_on_time']) 
 
     # Turn flood on/off if necessary
     if on and not climate_state['flood_on']:
@@ -563,7 +601,6 @@ def run_air_flush_loop(controller):
 
     recipe_interval = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
     flush_on = recipe_interval['turn_on'] 
-    #- flush_on = run_interval_loop('air_flush', climate_state['air_flush_on'], climate_state['air_flush_last_on_time']) 
 
     # Turn flush on/off if necessary
     if flush_on and not climate_state['air_flush_on']:

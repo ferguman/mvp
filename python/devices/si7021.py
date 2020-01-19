@@ -3,6 +3,7 @@ import smbus2
 
 from sys import exc_info
 from time import sleep, time
+from timeit import default_timer as timer 
 
 from python.devices.I2c_slave import I2c_slave
 from python.logger import get_sub_logger 
@@ -20,6 +21,9 @@ class si7021(I2c_slave):
 
     def initialize(self) -> bool:
 
+        #TODO - Need to add a try except block around this code to catch exceptions
+
+        start_time = timer()
         logger.info('initializing si7021 sensor (air temperature and humidity)') 
 
         if not self.i2c_addr:
@@ -32,6 +36,10 @@ class si7021(I2c_slave):
         # the log file. 
         humidity_read_error_id = 0
         temp_read_error_id = 1
+
+        self.update_sensor_readings()
+
+        logger.info('si7021 sensor initialized successfully in {:.3f} seconds'.format(timer() - start_time))
 
         return True 
 
