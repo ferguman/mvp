@@ -18,7 +18,7 @@ log_entry_table = LogFileEntryTable(60*60)
 
 camera_lock = Lock()
 
-def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fop command') -> 'file_path':
+def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fop command', take_an_average: bool) -> 'file_path':
 
     # Wait for camera to become available.
     camera_lock.acquire()
@@ -32,17 +32,17 @@ def snap(repl: 'fop repl monitor', pose_on_cmd: 'fop command', pose_off_cmd: 'fo
         file_name = '{:%Y%m%d_%H_%M_%S}.jpg'.format(datetime.utcnow())
         file_location = os_path.join(camera_image_directory, file_name)
 
-        #TODO: A client had issues with the camera images having dark bands. We think this is because
-        #      the lights they were using are flickering at 60 HZ. The follwing fswebcam command reduces
-        #      the banding considerably.
-        #      camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp --fps 60 --frames 60'\
-        #                           + ' --verbose  --save {}'.format(file_location)
+        #Note: A client had issues with the camera images having dark bands. We think this is because
+        #      the lights they were using are flickering at 60 HZ. The fswebcam args -fps 60 
+        #      -frames 60 reduces the banding considerably. The take_an_average boolean is sourced
+        #      from the configuration file.
         #
-        #      So add a configuration option to set multiframe captures at 50 and 60 hz or better yet allow the fswebcam options
-        #      to be piped in dircetly from the configuration file.
-        #
-        camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp "%d-%m-%Y %H:%M:%S (%Z)"'\
-                             + ' --verbose  --save {}'.format(file_location)
+        if take_an_average:
+            camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp --fps 60 --frames 60'\
+                                 + ' --verbose  --save {}'.format(file_location)
+        else:
+            camera_shell_command = 'fswebcam -r 1280x720 --no-banner --timestamp "%d-%m-%Y %H:%M:%S (%Z)"'\
+                                 + ' --verbose  --save {}'.format(file_location)
 
         logger.debug('Preparing to run shell command: {}'.format(camera_shell_command))
 
@@ -109,14 +109,15 @@ def make_help(args):
 
     return help
 
-def make_update(app_state, args, camera_subscribers: list):
+
+def make_update(app_state, args, camera_subscribers: list, take_an_average: bool):
 
     def update(sub):
         logger.info('got here')
 
         for s in camera_subscribers:
             if s.name.lower() == sub.lower():          
-                file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+                file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'], take_an_average)
                 if file_location == None:
                     return 'Cannot take a picture'
                 s.new_picture(file_location)
@@ -150,12 +151,17 @@ def start(app_state, args, b):
    
     camera_subscribers = get_camera_subscribers(args['subscribers'])
 
+    if 'take_an_average' in args.keys():
+        take_an_average = args['take_an_average']
+    else:
+        take_an_average = False
+
     # Inject your commands into app_state.
     app_state[args['name']] = {} 
     app_state[args['name']]['help'] = make_help(args) 
-    app_state[args['name']]['snap'] = lambda: snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+    app_state[args['name']]['snap'] = lambda: snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'], take_an_average)
     app_state[args['name']]['show_subs'] = make_show_subs(camera_subscribers) 
-    app_state[args['name']]['update'] = make_update(app_state, args, camera_subscribers) 
+    app_state[args['name']]['update'] = make_update(app_state, args, camera_subscribers, take_an_average) 
 
     # Don't proceed until all the other threads are up and ready.
     b.wait()    
@@ -168,7 +174,7 @@ def start(app_state, args, b):
         for s in camera_subscribers:
             if s.wants_picture(this_instant, state['startup']):
                 if file_location == None:
-                    file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'])
+                    file_location = snap(app_state['sys']['cmd'], args['pose_on_cmd'], args['pose_off_cmd'], take_an_average)
                     if file_location == None:
                         logger.error('Cannot take a picture')
                         break
