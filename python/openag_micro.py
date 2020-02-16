@@ -113,7 +113,7 @@ def extract_sensor_values(mc_response, vals):
                 readings_found = True
                 # Save each reading with a timestamp.
                 # TBD: Think about converting to the "native" values (e.g. int, float, etc) here.
-                for i in range (1, len(reading_names)):
+                for i in range (1, len(reading_names) + 1):
                    vals[i-1]['value'] = values[i] 
 
     if not readings_found:
