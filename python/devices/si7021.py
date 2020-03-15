@@ -16,14 +16,12 @@ previous_temp = 0xe0
 
 logger = get_sub_logger(__name__)
 
-#- class si7021(object):
 class si7021(I2c_slave):
 
     def initialize(self) -> bool:
 
-        #TODO - Need to add a try except block around this code to catch exceptions
-
         start_time = timer()
+
         logger.info('initializing si7021 sensor (air temperature and humidity)') 
 
         if not self.i2c_addr:
@@ -37,7 +35,14 @@ class si7021(I2c_slave):
         humidity_read_error_id = 0
         temp_read_error_id = 1
 
-        self.update_sensor_readings()
+        try:
+            self.update_sensor_readings()
+            logger.info('Initial si7021 sensor readings -> temp: {}, humidity: {}'.format(
+                self.vals[self.attribute_value_indexes['temperature']]['value'], 
+                self.vals[self.attribute_value_indexes['humidity']]['value']))
+        except:
+            logger.error('si7021 sensor failed to initilize: {}, {}'.format(exc_info()[0], exc_info()[1]))
+            return False
 
         logger.info('si7021 sensor initialized successfully in {:.3f} seconds'.format(timer() - start_time))
 
@@ -45,21 +50,27 @@ class si7021(I2c_slave):
 
     def update_sensor_readings(self, take_readings=False):
 
-           ts = time()
-               
-           h = self.getHumidity()
-           t = self.getTempC()
+        ts = time()
 
-           for k,v in self.attribute_value_indexes.items():
-               if k == 'humidity':
-                   self.vals[v]['value'] = '{:+.1f}'.format(h)
-                   self.vals[v]['ts'] = ts 
-               elif k == 'temperature':
-                   self.vals[v]['value'] = '{:+.1f}'.format(t)
-                   self.vals[v]['ts'] = ts 
-               else:
-                   logger.error('unknown attribute value {}, check the configuration'.format(k))
-               
+        try:               
+            h = self.getHumidity()
+            t = self.getTempC()
+
+            for k,v in self.attribute_value_indexes.items():
+                if k == 'humidity':
+                    self.vals[v]['value'] = '{:+.1f}'.format(h)
+                    self.vals[v]['ts'] = ts 
+                elif k == 'temperature':
+                    self.vals[v]['value'] = '{:+.1f}'.format(t)
+                    self.vals[v]['ts'] = ts 
+                else:
+                    logger.error('si7021 sensor - unknown attribute value {}, check the configuration'.format(k))
+        except:
+            logger.error('cannot read si7021 sensor: {}, {}'.format(exc_info()[0], exc_info()[1]))
+            # Blank the sensor readings
+            for k,v in self.attribute_value_indexes.items():
+                self.vals[v]['value'] = None 
+
 
     def read_word(self):
         """
@@ -73,7 +84,6 @@ class si7021(I2c_slave):
         msb = ord(msg.buf[0])
         lsb = ord(msg.buf[1])
         checksum = ord(msg.buf[2])
-#        print "  si7021 i2c read:", msb, lsb, checksum
         return (msb*256) + lsb
 
     def write(self, command):

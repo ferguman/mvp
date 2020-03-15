@@ -77,6 +77,8 @@ if initialization_performed:
     # It is assumed that the fopd must restart itself after
     # any initializations so exit and wait for systemd to
     # re-start the service.
+    # TODO put a console write here (when being run in console mode) that tells the user
+    #      that fopd is shutting down because intitiliazations were done.
     exit(0)
 
 # Check that the configuration file is present and then load it.

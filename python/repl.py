@@ -18,13 +18,15 @@ cmd_lock = Lock()
 def help():
     
     return """\
-    sys.help() -   displays this page.
-    sys.exit() -   stop the fopd program.
-    sys.dir() -    show all available resources.
-    sys.cmd(cmd) - run a command. Note: that if a command calls this command then the system will lock
-                   forever waiting for the first call to finish.  This command is not reentrant. Also
-                   if you call this command from the command prompt then the sytem will lock forever. This
-                   command is meant for resources such as an MQTT client to use.\n
+    sys.help() -     displays this page.
+    sys.exit() -     stop the fopd program.
+    sys.dir() -      show all available resources.
+    sys.get_obs() -  download observeration json from the cloud
+
+    sys.cmd(cmd) -   run a command. Note: that if a command calls this command then the system will lock
+                     forever waiting for the first call to finish.  This command is not reentrant. Also
+                     if you call this command from the command prompt then the sytem will lock forever. This
+                     command is meant for resources such as an MQTT client to use.\n
 
     In order to access the help for each resource enter: resource_name.help() where
     resource_name is the name of the resource. Enter sys.dir() to see a list of 
@@ -114,6 +116,15 @@ def make_run_cmd(repl_globals, app_state):
 
     return run_cmd
 
+
+def make_get_observations_cmd(app_state):
+
+    def get_obs_cmd(device_id, start_date, end_date, path_name):
+        return 'this command will access the fopd cloud and download observation json and store it in a file'
+
+    return get_obs_cmd
+
+
 # TODO: See flask.pocoo.org/snippets/67/ and flask.pocoo.org/docs/1.0/reqcontext.
 #       As of 9/30 this code returns No shutdown function found. The docs say this
 #       reset stuff only works on the development server. I think my testing was done
@@ -145,6 +156,7 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
     app_state['sys']['exit'] = make_exit(app_state)
     app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
+    app_state['sys']['get_obs'] = make_get_observations_cmd(app_state)
 
     # Let the system know that you are good to go.
     if barrier:
@@ -174,7 +186,7 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
             cmd = input(app_state['config']['device_name'] + ': ')
             print(app_state['sys']['cmd'](cmd))
         else:
-            # TODO - I think one can just return at this point. No need to keep the thread safe, 
+            # TODO - I think one can just return at this point. No need to keep the thread alive, 
             #        but wait, things like repl_globals need to stay alive so the command interpretter 
             #        can be invoked from other resources. So maybe I can't kill the thread.
             sleep(1)

@@ -51,13 +51,12 @@ class Mh_z16_ndir_co2(I2c_slave):
                 return True
             # except IOError:
             except:
-                logger.error('MH-Z16 Co2 Sensor failed to initialize after .{:.3f} seconds'.format(timer() - start_time))
+                logger.error('MH-Z16 Co2 Sensor failed to initialize after {:.3f} seconds'.format(timer() - start_time))
                 return False 
 
         logger.error('MH-Z16 Co2 Sensor failed to initialize after {} trials and {:.3f} seconds'.format(trial, timer() - start_time))
         return False
 
-    #- def measure(self):
     def update_sensor_readings(self):
         try:
             ts = time()
@@ -75,11 +74,12 @@ class Mh_z16_ndir_co2(I2c_slave):
 
             self.vals[self.attribute_value_indexes['co2']]['ts'] = ts 
 
-            # return True
-        except IOError:
-            # TODO - need to put an error log message here.
-            pass
-            #- return False
+        #- except IOError:
+        except:
+            logger.error('cannot read MH-Z16 Co2 sensor: {}, {}'.format(exc_info()[0], exc_info()[1]))
+            # Blank the sensor readings
+            self.vals[self.attribute_value_indexes['co2']]['value'] = None
+
 
     def parse(self, response):
         checksum = 0
