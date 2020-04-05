@@ -81,7 +81,7 @@ if initialization_performed:
     #      that fopd is shutting down because intitiliazations were done.
     exit(0)
 
-# Check that the configuration file is present and then load it.
+# Check that the configuration file, don't run if there is no configuration file.
 if not verify_config_file():
     # exit with error
     exit('no configuration file - cannot run')

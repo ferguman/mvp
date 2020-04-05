@@ -13,6 +13,12 @@ def execute_main(args, default_device_name):
     #       first time fopd.py is run on a new device there may not be a config
     #       file yet.  So make sure that execute_main is only called once in the program.
     #
+    # TODO: Consider refacting the codebase so that hte config file is executed (e.g.
+    #       config = {}
+    #       exec(Path('config.py').read_text(), config)
+    #       The above commands will put the configuration file objects into the config dictionary. 
+    #       the config dictionary can then be made available as a global.  This would
+    #       allow the fopd to re-load the config file with out having to restart.
     from config import system, device_name
 
     if default_device_name != device_name:
@@ -21,8 +27,6 @@ def execute_main(args, default_device_name):
         logger = get_top_level_logger(device_name)
     else:
         logger = getLogger(default_device_name)
-
-    #- logger.info('############## starting farm operation platform device ################')
 
     logger.info('fopd device id: {}'.format(system['device_id']))
 
