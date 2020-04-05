@@ -51,8 +51,8 @@ def make_sensor_list(args, sensor_readings):
             # Instantiate and build all sensors.
             module = __import__('python.{}'.format(s['sensor_module']), fromlist=[s['sensor_name']])
             class_ = getattr(module, s['sensor_name'])
-            #- sensors.append(class_(s, sensor_readings))
-            sensors.append({'online':False, 'sensor':class_(s, sensor_readings)})
+
+            sensors.append({'online':False, 'enabled': s.get('enabled', False), 'sensor':class_(s, sensor_readings)})
 
     return sensors
 
@@ -293,7 +293,8 @@ def start(app_state, args, b):
     #       types of sensors can be added gracefully.
     i2c_sensors = make_sensor_list(args, data_values)
     for s in i2c_sensors:
-        s['online'] = s['sensor'].initialize()
+        if s['enabled']:
+            s['online'] = s['sensor'].initialize()
 
     # Setup the GPIO based inputs and outputs
     GPIO.setwarnings(False)
