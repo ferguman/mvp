@@ -9,14 +9,17 @@ from python.devices.I2c_slave import I2c_slave
 from python.logger import get_sub_logger 
 
 # Use the default address if none is supplied via the configuration
-default_i2c_address = 0xb8
+# The am2315 has one built in address (0xB8)
+default_i2c_address = 0xB8
 
 #- rh_no_hold = 0xf5
 #- previous_temp = 0xe0
 
+#TODO - This sensor class is not functional. It needs to be completed.
+
 logger = get_sub_logger(__name__)
 
-class si7021(I2c_slave):
+class am2315(I2c_slave):
 
     def initialize(self) -> bool:
 
@@ -40,6 +43,7 @@ class si7021(I2c_slave):
             #+ logger.info('Initial si7021 sensor readings -> temp: {}, humidity: {}'.format(
                 #+ self.vals[self.attribute_value_indexes['temperature']]['value'], 
                 #+ self.vals[self.attribute_value_indexes['humidity']]['value']))
+                return False;
         except:
             logger.error('am2315 sensor failed to initilize: {}, {}'.format(exc_info()[0], exc_info()[1]))
             return False

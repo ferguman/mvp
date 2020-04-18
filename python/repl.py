@@ -4,12 +4,17 @@
 from getpass import getpass
 from sys import exc_info
 from threading import Lock
-from time import sleep
+from time import sleep, time
 import re
+from uuid import uuid4
 
 from flask import request
+from jose import jws
 
 from python.logger import get_sub_logger 
+from python.encryption.nacl_fop import decrypt
+
+from config import device_id, hmac_secret_key_b64_cipher, fop_jose_id
 
 logger = get_sub_logger(__name__)
 
@@ -22,6 +27,8 @@ def help():
     sys.exit() -     stop the fopd program.
     sys.dir() -      show all available resources.
     sys.get_obs() -  download observeration json from the cloud
+    sys.create_jwt(subject) - Make a jwt token.
+    sys.get_fop_credentials(pin) - Post the fop server and get back the MQTT and JWT credentials.
 
     sys.cmd(cmd) -   run a command. Note: that if a command calls this command then the system will lock
                      forever waiting for the first call to finish.  This command is not reentrant. Also
@@ -32,6 +39,38 @@ def help():
     resource_name is the name of the resource. Enter sys.dir() to see a list of 
     available resources on your system. Example: camera.help().
     """
+
+def claim_info(subject):
+
+    #- TODO: Time delivers seconds since unix epoch. Not all systems have the same epoch start date.  There
+    #- may be a better way to time stamp the claims.
+    issue_time = int(time())
+
+    # See RFC 7519
+    return {'iss':device_id,                 #Issuer -> This mvp is the issuer. Use it's secret key to authenticate.
+            'aud':fop_jose_id,               #Audience -> identifies the cloud provider that will receive this claim.
+            'exp':issue_time + 60,           #Expiration Time
+            'sub':subject,                   #Subject -> 
+            'nbf':issue_time - 60,           #Not Before Time
+            'iat':issue_time,                #Issued At
+            'jti':str(uuid4())}              #JWT ID -> Don't accept duplicates by jti
+
+def make_get_fopd_credentials():
+    #TODO create this function
+    #     it needs to post a PIN and UUID to the fop server. The fop server will look for a match in it's database
+    #     and send back an MQTT account and a JWT secret if a hit is found.
+    #
+    pass
+
+def make_create_jwt():
+
+    def create_jwt(subject):
+        return jws.sign(claim_info(subject), 
+               decrypt(hmac_secret_key_b64_cipher),
+               algorithm='HS256')
+
+    return create_jwt
+
 
 def make_exit(app_state):
 
@@ -153,6 +192,8 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
     app_state['sys']['cmd'] = make_run_cmd(repl_globals, app_state) 
 
     app_state['sys']['help'] = help
+    app_state['sys']['create_jwt'] = make_create_jwt()
+    app_state['sys']['get_fopd_credetials'] = make_get_fopd_credentials()
     app_state['sys']['exit'] = make_exit(app_state)
     app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)

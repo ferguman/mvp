@@ -6,15 +6,15 @@ from nacl import secret, utils
 
 from python.data_file_paths import configuration_directory_location
 
-
 #+ from config.private_key import nsk_b64
 
 def encrypt(plain_text: 'binary string') -> 'b64 string':
 
     with SecretKey() as nsk:
         return standard_b64encode(secret.SecretBox(bytes(nsk)).encrypt(plain_text))
-
+    
 def decrypt(ciper_text) -> 'binary string': 
+    """accept a binary 64 encoded input string and decrypt it."""
 
     with SecretKey() as nsk:
         return secret.SecretBox(bytes(nsk)).decrypt(standard_b64decode(ciper_text))
