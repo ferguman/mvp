@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from flask import request
 from jose import jws
+from requests import post
 
 from python.logger import get_sub_logger 
 from python.encryption.nacl_fop import decrypt
@@ -60,7 +61,15 @@ def make_get_fopd_credentials():
     #     it needs to post a PIN and UUID to the fop server. The fop server will look for a match in it's database
     #     and send back an MQTT account and a JWT secret if a hit is found.
     #
-    pass
+    def get_fopd_credentials(registration_code):
+        # Post PIN and a madeup UUID to the fop service - the idea is the user is registering their fopd after which they
+        # will create a configuration (currently config.py)
+        # TODO - need to get the url either as user input or something shipped with the fopd firmware or both.
+        r = post('https://fop1.urbanspacefarms.com:5000/api/register',
+                data={'registration_code':'foobar'})
+        return r.content.decode('utf-8')
+
+    return get_fopd_credentials
 
 def make_create_jwt():
 
@@ -193,7 +202,7 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
 
     app_state['sys']['help'] = help
     app_state['sys']['create_jwt'] = make_create_jwt()
-    app_state['sys']['get_fopd_credetials'] = make_get_fopd_credentials()
+    app_state['sys']['get_fopd_credentials'] = make_get_fopd_credentials()
     app_state['sys']['exit'] = make_exit(app_state)
     app_state['sys']['dir'] = make_sys_dir_cmd(app_state['system']) 
     app_state['sys']['sdw'] = make_shut_down_werkzeug(app_state)
