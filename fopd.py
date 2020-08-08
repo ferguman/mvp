@@ -35,9 +35,19 @@ if not check_python_version():
 #
 from sys import exc_info, exit, path
 from python.data_file_paths import configuration_directory_location
+from data_location import current_python_folder
+
+# Point at the location of the config file
 path.append(configuration_directory_location)
 
-from python.args import get_args
+# Point at the location of the main code base for fopd.
+# TODO - This is the start of refactoring the code so that the main code base can be located anywhere.
+#        This ability to locate the code base could be used within a remote update infrastructure to
+#        a pair of code bases to be maintained.
+path.append(current_python_folder)
+
+#- from python.args import get_args
+from args import get_args
 from python.initialize import initialize, check_state_file
 from python.logger import get_top_level_logger
 from python.utilities.main import execute_utility
