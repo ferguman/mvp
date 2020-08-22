@@ -7,6 +7,9 @@
 # via a remote connection such as MQTT.
 # 2) If they don't exists then create the directories python_a and python_b and initiliaze next_pyhon_folder and current_python_folder
 # 2) Download github_tag to data_locations.py(next_python_folder)
+#     The the following command will put the given version of the python directory into the junk.tar.gz file.
+#     git archive --format=tar.gz 8705180:python > junk.tar.gz
+#     the 8705180 is the commit tag (I think).  
 # 3) Swap the values in data_locations(current_python_folder) and data_locations(next_python_folder)
 # 4) Set data_locations(play_state) = first_boot_pending
 # 4) Exit fopd
@@ -35,3 +38,4 @@ def init(app_state):
     #    status()
     #
     logger.info("Initializing python remote deployment (ploy)")
+    
