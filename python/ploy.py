@@ -1,10 +1,9 @@
 # Python remote deployment (ploy)
-# TODO - put python_a and python_b in the git ignore file.
 #
 # There are two python folders in the fopd directory: python_a and python_b
 #
 # Deployment consists of the following steps: 
-# 1) The running fopd instance receives the command ploy(github_tag, TODO: specify the other arguments). This could be via the command line or
+# 1) The running fopd instance receives the command deploy(github_tag, TODO: specify the other arguments). This could be via the command line or
 # via a remote connection such as MQTT.
 # 2) If they don't exists then create the directories python_a and python_b and initiliaze next_pyhon_folder and current_python_folder
 # 2) Download github_tag to data_locations.py(next_python_folder)
@@ -23,3 +22,16 @@
 # 4) Set data_locations(ploy_state) = fail_back
 # 5) Exit fopd
 #
+
+from python.logger import get_sub_logger
+
+logger = get_sub_logger(__name__)
+
+def init(app_state):
+    # TODO - Inject the ploy commands into the app_state and then start testing them.
+    #        Spend some time designing and thinking about the entire command set.
+    # Commands:
+    #    deploy(github_tag)
+    #    status()
+    #
+    logger.info("Initializing python remote deployment (ploy)")

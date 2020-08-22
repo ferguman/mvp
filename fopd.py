@@ -44,6 +44,7 @@ path.append(configuration_directory_location)
 # TODO - This is the start of refactoring the code so that the main code base can be located anywhere.
 #        This ability to locate the code base could be used within a remote update infrastructure to
 #        a pair of code bases to be maintained.
+# If python remote update is supported then you should see two folders in the fopd directory: python_a and python_b. See ploy.py for more details.
 path.append(current_python_folder)
 
 #- from python.args import get_args

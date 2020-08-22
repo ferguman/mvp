@@ -231,6 +231,7 @@ def start(app_state, silent_mode, barrier, start_cmd=None):
     while not app_state['stop']:
 
         # Listen for commands from the shell if enabled, otherwise wait to be stopped.
+        # Note that other components such as MQTT may be executing commands via app_state['sys']['cmd'].
         if not silent_mode:
             # TBD: Need to sanitize the name to guard against shell attack.
             cmd = input(app_state['config']['device_name'] + ': ')

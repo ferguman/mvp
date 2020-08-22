@@ -19,6 +19,8 @@ config/*
 !config/templates
 pictures/*.*
 !pictures/.gitkeep
+python_a
+python_b
 state/*.*
 state/*
 !state/.gitkeep
