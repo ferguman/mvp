@@ -5,7 +5,7 @@ from logging import getLogger
 from importlib import import_module
 from python.repl import start as repl_start
 from python.logger import get_top_level_logger
-from python.ploy import init as ploy_init
+from python.updater import updater_init 
 
 def execute_main(args, default_device_name):
 
@@ -70,8 +70,8 @@ def execute_main(args, default_device_name):
     for t in tl:
         t.start()
 
-    # Insert the ploy (python remote deployment commands into the repl
-    ploy_init(app_state)
+    # Insert the updater (python remote deployment commands into the repl
+    updater_init(app_state)
 
 
     # Stop here and Wait for non-daemon threads to complete.

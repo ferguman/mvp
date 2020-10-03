@@ -1,4 +1,4 @@
-# Python remote deployment (ploy)
+# Remote Updater 
 #
 # There are two python folders in the fopd directory: python_a and python_b
 #
@@ -30,7 +30,7 @@ from python.logger import get_sub_logger
 
 logger = get_sub_logger(__name__)
 
-def init(app_state):
+def updater_init(app_state):
     # TODO - Inject the ploy commands into the app_state and then start testing them.
     #        Spend some time designing and thinking about the entire command set.
     # Commands:
