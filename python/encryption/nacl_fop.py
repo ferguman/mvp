@@ -1,9 +1,7 @@
 # Wrapper functions for PyNaCl (https://pynacl.readthedocs.io/en/stable/)
-
+#
 from base64 import standard_b64encode, standard_b64decode
-
 from nacl import secret, utils
-
 from python.data_file_paths import configuration_directory_location
 
 #+ from config.private_key import nsk_b64
@@ -49,7 +47,6 @@ class SecretKey:
 
     def __enter__(self) -> 'bytearray':
 
-        #- with open('config/private_key', 'rb') as fp:
         with open(configuration_directory_location + 'private_key', 'rb') as fp:
 
             self.secret_key = bytearray(32)

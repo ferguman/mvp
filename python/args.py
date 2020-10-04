@@ -12,5 +12,5 @@ def get_args():
                                  'create_service_file', 'decrypt', 'encrypt'],
                         help='perform a utility function.')
     parser.add_argument('-i', '--utility_input', type=str, 
-                        help='Input for encrypt and decrypt utilities')
+                        help='Input for encrypt and decrypt utilities. Don''t quote input strings and use \ to escape special characters and spaces.')
     return parser.parse_args()
