@@ -22,6 +22,7 @@
 # It is assumed that fopd.py is located in a directory that contains code and data organized
 # identical to the way it is stored in github (https://github.com/ferguman/fopd)
 # 
+# TODO - Look at https://github.com/chriskiehl/Gooey as an example of how to turn a python command line program into a GUI
 
 # Make sure we are running a compatible version of python.
 from check_python_version import check_python_version
